@@ -62,15 +62,15 @@ export function PaymentInvoice({
       {/* Header */}
       <div className="flex items-center justify-between mb-1 pb-1 border-b border-gray-200">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Eco Hotel</h2>
+          <h2 className="text-xl font-bold text-gray-800">Orkid Hills Hotel</h2>
           <p className="text-xs text-gray-500">
-            179, Jalan Pudu, Pudu-55100 Kuala Lumpur, Malaysia
+            300, Jalan Pudu, Pudu-55100 Kuala Lumpur, Malaysia
           </p>
           <p className="text-xs text-gray-500">
-            <strong>Hotline:</strong> +601116962002, 0178988418
+            <strong>Hotline:</strong> +60 173004099, +60 178988418
           </p>
           <p className="text-xs text-gray-500">
-            <strong>E-mail:</strong> ecohotel.bb@gmail.com
+            <strong>E-mail:</strong> orkidhills@gmail.com
           </p>
         </div>
         <div className="text-right">

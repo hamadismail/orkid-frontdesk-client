@@ -1,7 +1,12 @@
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { format } from "date-fns";
-import { Card, CardContent, CardFooter, CardHeader } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { Button } from "../components/ui/button";
 import Image from "next/image";
@@ -50,7 +55,7 @@ export default function ReservationInvoice({
   const calculateNights = () => {
     const diffTime = Math.abs(
       new Date(bookingInfo.room.departure).getTime() -
-        new Date(bookingInfo.room.arrival).getTime()
+        new Date(bookingInfo.room.arrival).getTime(),
     );
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -62,7 +67,8 @@ export default function ReservationInvoice({
     const sst = bookingInfo.payment.sst;
     const fnfDiscount = bookingInfo.payment.fnfDiscount;
 
-    const totalAmount = (roomPrice + tourismTax + sst) - (fnfDiscount + advancePayment);
+    const totalAmount =
+      roomPrice + tourismTax + sst - (fnfDiscount + advancePayment);
     return totalAmount.toFixed(2) || 0;
   };
 
@@ -72,17 +78,17 @@ export default function ReservationInvoice({
         <CardHeader className="text-center">
           {/* <h1 className="text-2xl font-bold">Orkid Hills</h1> */}
           <Image
-            src="/img/ecoHotel.png"
-            alt="Eco Hotel Logo"
+            src="/img/orkidhill.png"
+            alt="Orkid Hills Logo"
             width={500}
             height={200}
             className="mx-auto w-1/2"
           />
           <Separator className="my-2 w-3/4 mx-auto" />
           <div className="text-xs text-muted-foreground">
-            <p>179, Jalan Pudu, Pudu-55100 Kuala Lumpur, Malaysia</p>
-            <p>Hotline: +601116962002, 0178988418</p>
-            <p>Email: ecohotel.bb@gmail.com</p>
+            <p>300, Jalan Pudu, Pudu, 55100, Kuala Lumpur, Malaysia</p>
+            <p>Hotline: +60 173004099, +60 178988418</p>
+            <p>Email: orkidhills@gmail.com</p>
           </div>
         </CardHeader>
 

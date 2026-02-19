@@ -36,7 +36,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
       if (guest.stay.arrival && guest.stay.departure) {
         const diffTime = Math.abs(
           new Date(guest.stay.departure).getTime() -
-            new Date(guest.stay.arrival).getTime()
+            new Date(guest.stay.arrival).getTime(),
         );
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
       }
@@ -98,7 +98,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
             {/* Company Info with Logo */}
             {/* <Image
               src="/img/ecoHotel.png"
-              alt="Eco Hotel Logo"
+              alt="Orkid Hills Hotel Logo"
               width={500}
               height={200}
               className="mx-auto w-1/2"
@@ -108,7 +108,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 {/* Replace with your actual logo */}
                 <div className="w-48 h-12 bg-linear-to-r from-green-600 to-emerald-700 rounded flex items-center justify-center mb-2">
                   <span className="text-white font-bold text-xl">
-                    ECO HOTEL
+                    ORKID HILLS
                   </span>
                 </div>
                 <p className="text-emerald-700 font-medium">
@@ -116,11 +116,11 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 </p>
               </div>
               <div className="text-sm text-gray-600">
-                <p>179, Jalan Pudu</p>
-                <p>Pudu-55100 Kuala Lumpur</p>
+                <p>300, Jalan Pudu</p>
+                <p>Pudu, 55100, Kuala Lumpur</p>
                 <p>Malaysia</p>
-                <p className="mt-1">Phone: +601116962002, 0178988418</p>
-                <p>Email: ecohotel.bb@gmail.com</p>
+                <p className="mt-1">Phone: +60 173004099, +60 178988418</p>
+                <p>Email: orkidhills@gmail.com</p>
               </div>
             </div>
 
@@ -239,22 +239,20 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 <tr>
                   <td className="p-4">
                     <div>
-                      <p className="font-medium">
-                        Room Accommodation:
-                      </p>
+                      <p className="font-medium">Room Accommodation:</p>
 
                       <p className="text-sm text-gray-600">
                         {typeof guest?.roomId === "object" &&
-                        "roomType" in guest.roomId
+                        "roomType" in guest?.roomId
                           ? guest.roomId.roomType
                           : "Standard Room"}{" "}
                         {!guest.isCheckOut &&
                           `• Check-in: ${formatDate(
-                            new Date(guest.createdAt || new Date())
+                            new Date(guest.createdAt || new Date()),
                           )}`}{" "}
                         {guest.isCheckOut &&
                           `• Check-out: ${formatDate(
-                            new Date(guest.updatedAt || new Date())
+                            new Date(guest.updatedAt || new Date()),
                           )}`}
                       </p>
                     </div>
@@ -351,7 +349,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
               </h3>
               <div className="text-sm text-gray-600 space-y-1">
                 <p>• Bank Transfer: Maybank 5140-1234-5678</p>
-                <p>• Payable to: Eco Hotel Sdn Bhd</p>
+                <p>• Payable to: Orkid Hills Hotel Sdn Bhd</p>
                 <p>• Please include invoice number with payment</p>
                 <p>• Payment due within 14 days</p>
               </div>
@@ -370,7 +368,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
 
           <div className="mt-8 pt-6 border-t border-gray-300 text-center">
             <p className="text-emerald-700 font-semibold mb-2">
-              Thank you for choosing Eco Hotel!
+              Thank you for choosing Orkid Hills Hotel!
             </p>
             <p className="text-sm text-gray-600">
               This is a computer-generated invoice. No signature required.
@@ -379,7 +377,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
         </div> */}
       </div>
     );
-  }
+  },
 );
 
 GuestInvoice.displayName = "GuestInvoice";

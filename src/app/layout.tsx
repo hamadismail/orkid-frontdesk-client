@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eco Hotel",
+  title: "Orkid Hills Hotel",
   description: "Hotel reservation",
 };
 

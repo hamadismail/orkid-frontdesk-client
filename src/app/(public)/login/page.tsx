@@ -53,14 +53,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <Image
-            src="/img/ecoHotel.png"
-            alt="Putra Hills"
+            src="/img/orkidhill.png"
+            alt="Orkid Hills Hotel Logo"
             width={150}
             height={150}
             priority
             className="mx-auto w-auto h-auto"
           />
-          <CardTitle className="text-2xl font-bold sr-only">Eco Hotel</CardTitle>
+          <CardTitle className="text-2xl font-bold sr-only">Orkid Hills Hotel</CardTitle>
           <CardDescription>Frontdesk Login</CardDescription>
         </CardHeader>
         <CardContent>

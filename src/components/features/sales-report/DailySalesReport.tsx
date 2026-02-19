@@ -39,42 +39,48 @@ export function DailySalesReport({
 
   const totalSales = payments.reduce(
     (acc, payment) => acc + payment.paidAmount,
-    0
+    0,
   );
 
-  const categorizedByPaymentMethod = payments.reduce((acc, payment) => {
-    const { paymentMethod } = payment;
-    if (!acc[paymentMethod]) {
-      acc[paymentMethod] = {
-        payments: [],
-        total: 0,
-      };
-    }
-    acc[paymentMethod].payments.push(payment);
-    acc[paymentMethod].total += payment.paidAmount;
-    return acc;
-  }, {} as Record<string, { payments: IPayment[]; total: number }>);
+  const categorizedByPaymentMethod = payments.reduce(
+    (acc, payment) => {
+      const { paymentMethod } = payment;
+      if (!acc[paymentMethod]) {
+        acc[paymentMethod] = {
+          payments: [],
+          total: 0,
+        };
+      }
+      acc[paymentMethod].payments.push(payment);
+      acc[paymentMethod].total += payment.paidAmount;
+      return acc;
+    },
+    {} as Record<string, { payments: IPayment[]; total: number }>,
+  );
 
-  const categorizedByOta = payments.reduce((acc, payment) => {
-    let ota = "N/A";
-    if (
-      payment.guestId &&
-      typeof payment.guestId === "object" &&
-      "guest" in payment.guestId
-    ) {
-      ota = (payment.guestId as { guest: { otas: string } }).guest.otas;
-    }
+  const categorizedByOta = payments.reduce(
+    (acc, payment) => {
+      let ota = "N/A";
+      if (
+        payment.guestId &&
+        typeof payment.guestId === "object" &&
+        "guest" in payment.guestId
+      ) {
+        ota = (payment.guestId as { guest: { otas: string } }).guest.otas;
+      }
 
-    if (!acc[ota]) {
-      acc[ota] = {
-        payments: [],
-        total: 0,
-      };
-    }
-    acc[ota].payments.push(payment);
-    acc[ota].total += payment.paidAmount;
-    return acc;
-  }, {} as Record<string, { payments: IPayment[]; total: number }>);
+      if (!acc[ota]) {
+        acc[ota] = {
+          payments: [],
+          total: 0,
+        };
+      }
+      acc[ota].payments.push(payment);
+      acc[ota].total += payment.paidAmount;
+      return acc;
+    },
+    {} as Record<string, { payments: IPayment[]; total: number }>,
+  );
 
   return (
     <div className="bg-gray-100">
@@ -82,7 +88,7 @@ export function DailySalesReport({
         <header className="flex justify-between items-center pb-3 border-b mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Eco Hotel
+              Orkid Hills Hotel
             </h1>
             <p className="text-sm text-gray-600">Daily Sales Report</p>
           </div>
@@ -161,7 +167,7 @@ export function DailySalesReport({
                     </tfoot>
                   </table>
                 </div>
-              )
+              ),
             )}
           </section>
 
@@ -212,7 +218,7 @@ export function DailySalesReport({
                     </tfoot>
                   </table>
                 </div>
-              )
+              ),
             )}
           </section>
         </div>

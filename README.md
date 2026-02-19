@@ -1,7 +1,7 @@
 # Xpeed Frontdesk - Architecture Overview
 
 ## Project Overview
-Eco Hotel is a hotel management system built with Next.js 15, TypeScript, and MongoDB. It provides functionality for room management, reservations, bookings, and payment tracking for hotel operations.
+Orkid Hills Hotel is a hotel management system built with Next.js 15, TypeScript, and MongoDB. It provides functionality for room management, reservations, bookings, and payment tracking for hotel operations.
 
 ## Technology Stack
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS

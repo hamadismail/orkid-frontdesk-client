@@ -74,11 +74,16 @@ const STATUS_OPTIONS = [
 
 const FLOOR_OPTIONS = [
   { value: "all", label: "All Floors" },
+  { value: "m", label: "M Floor" },
   { value: "1", label: "1st Floor" },
   { value: "2", label: "2nd Floor" },
   { value: "3", label: "3rd Floor" },
   { value: "4", label: "4th Floor" },
   { value: "5", label: "5th Floor" },
+  { value: "6", label: "6th Floor" },
+  { value: "7", label: "7th Floor" },
+  { value: "8", label: "8th Floor" },
+  { value: "9", label: "9th Floor" },
 ] as const;
 
 const ROOM_TYPE_ICONS: Record<
