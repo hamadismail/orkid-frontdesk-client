@@ -28,7 +28,7 @@ export function PaymentReceiptDialog({
   } = useQuery({
     queryKey: ["receipt", payment._id],
     queryFn: async () => {
-      const { data } = await axios.get(`/receipt/${payment._id}`);
+      const { data } = await axios.get(`/payments/receipt/${payment._id}`);
       return data.data;
     },
     enabled: !!payment._id && open,

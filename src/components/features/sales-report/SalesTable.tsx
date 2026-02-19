@@ -87,17 +87,18 @@ export function SalesTable() {
   const [reportData, setReportData] = useState<IPayment[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<IPayment | null>(null);
 
-  const { data, isLoading } = useQuery<PaymentData>({
-    queryKey: ["payments", page, search, date, paymentMethod],
-    queryFn: () => getSalesReportPayment(page, search, date, paymentMethod),
-  });
+  const { data = { data: [], total: 0, page: 1, limit: 10 }, isLoading } =
+    useQuery<PaymentData>({
+      queryKey: ["payments", page, search, date, paymentMethod],
+      queryFn: () => getSalesReportPayment(page, search, date, paymentMethod),
+    });
 
   const fetchReportData = async () => {
     if (date) {
-      const { data } = await axios.get("/sales-report", {
+      const { data } = await axios.get("/payments/sales-report", {
         params: { date: date?.toISOString(), limit: 1000 },
       });
-      setReportData(data.data);
+      setReportData(data?.data?.data || []);
       setShowReport(true);
     }
   };
@@ -207,7 +208,7 @@ export function SalesTable() {
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </th>
                 ))}
@@ -238,7 +239,7 @@ export function SalesTable() {
                     <td key={cell.id} className="px-6 py-4 whitespace-nowrap">
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </td>
                   ))}
