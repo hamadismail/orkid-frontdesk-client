@@ -62,13 +62,18 @@ export default function ReservationInvoice({
 
   const calculateTotal = () => {
     const roomPrice = bookingInfo.payment.roomPrice || 0;
-    const advancePayment = bookingInfo.payment.paidAmount || 0;
     const tourismTax = bookingInfo.payment.tourismTax || 0;
     const sst = bookingInfo.payment.sst || 0;
+
+    ////
+    const advancePayment = bookingInfo.payment.paidAmount || 0;
     const discount = bookingInfo.payment.discount || 0;
 
+    const totalRoomCharge = roomPrice * calculateNights();
+
     const totalAmount =
-      roomPrice + tourismTax + sst - (discount + advancePayment);
+      totalRoomCharge + tourismTax + sst - (discount + advancePayment);
+
     return totalAmount.toFixed(2) || 0;
   };
 
@@ -162,9 +167,7 @@ export default function ReservationInvoice({
             <div className="grid grid-cols-2 p-2 border-t text-sm">
               <div>Room Charges ({calculateNights()} nights)</div>
               <div className="text-right">
-                {bookingInfo.payment.roomPrice
-                  ? bookingInfo.payment.roomPrice.toFixed(2)
-                  : 0}
+                {calculateNights() * bookingInfo.payment.roomPrice || 0} RM
               </div>
             </div>
 
