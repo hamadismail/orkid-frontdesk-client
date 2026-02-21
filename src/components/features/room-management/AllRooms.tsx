@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Hotel } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, Clock, Hotel } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import RoomCard from "@/src/components/features/room-management/RoomCard";
 import RoomFilter from "@/src/components/features/room-management/RoomFilter";
@@ -16,7 +16,17 @@ import { getAllBookings } from "@/src/services/booking.service";
 import { getAllReservations } from "@/src/services/reservation.service";
 
 function AllRooms() {
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [floorFilter, setFloorFilter] = useState("all");
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000); // Update every second for a "live" feel
+    return () => clearInterval(timer);
+  }, []);
+
   const [typeFilter, setTypeFilter] = useState<RoomType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "all">("all");
   const [dateFilter, setDateFilter] = useState<string>(() => {
@@ -233,6 +243,37 @@ function AllRooms() {
         <div className="flex items-center gap-3">
           <Hotel className="h-8 w-8 text-primary" />
           <h2 className="text-2xl font-bold">Room Management</h2>
+        </div>
+
+        <div className="flex items-center gap-4 bg-background/50 backdrop-blur-sm border rounded-xl px-4 py-2 shadow-sm">
+          <div className="flex items-center gap-2 border-r pr-4">
+            <Calendar className="h-4 w-4 text-primary" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Date</span>
+              <span className="text-sm font-bold">
+                {currentTime?.toLocaleDateString(undefined, {
+                  weekday: "short",
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }) || "..."}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Local Time</span>
+              <span className="text-sm font-bold tabular-nums">
+                {currentTime?.toLocaleTimeString(undefined, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                  second: "2-digit",
+                }) || "..."}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
