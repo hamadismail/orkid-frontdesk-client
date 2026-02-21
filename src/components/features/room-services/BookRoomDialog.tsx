@@ -136,11 +136,20 @@ export default function BookRoomDialog({
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const queryClient = useQueryClient();
 
-  const isReserved = useMemo(
-    () =>
-      allReservations?.filter((res) => res.room.roomNo === room.roomNo) || [],
-    [allReservations, room.roomNo],
-  );
+  const isReserved = useMemo(() => {
+    if (!room?._id) return [];
+
+    const roomIdStr = room._id.toString();
+
+    return (
+      allReservations?.filter((res) => {
+        const reservationRoomId =
+          typeof res.roomId === "string" ? res.roomId : res.roomId?._id;
+
+        return reservationRoomId === roomIdStr;
+      }) || []
+    );
+  }, [allReservations, room?._id]);
 
   const reserveGuest = isReserved[0];
 
@@ -247,26 +256,27 @@ export default function BookRoomDialog({
         ...prev,
         guest: {
           ...prev.guest,
-          refId: reserveGuest.guest?.reservationNo || "",
+          refId: reserveGuest.guest?.refId || "",
           name: reserveGuest.guest?.name || "",
           email: reserveGuest.guest?.email || "",
           phone: reserveGuest.guest?.phone || "",
-          country: reserveGuest.guest?.nationality || "",
+          country: reserveGuest.guest?.country || "",
           passport: reserveGuest.guest?.passport || "",
-          otas: (reserveGuest.guest?.ota as OTAS) || OTAS.WALKING_GUEST,
+          otas: (reserveGuest.guest?.otas as OTAS) || OTAS.WALKING_GUEST,
         },
         stay: {
           ...prev.stay,
-          departure: reserveGuest.room?.departure
-            ? new Date(reserveGuest.room.departure)
+          departure: reserveGuest.stay?.departure
+            ? new Date(reserveGuest.stay.departure)
             : prev.stay.departure,
         },
         payment: {
           ...prev.payment,
+          roomPrice: reserveGuest.payment?.roomPrice?.toString() || "",
           sst: reserveGuest.payment?.sst?.toString() || "",
           tourismTax: reserveGuest.payment?.tourismTax?.toString() || "",
-          // discount: reserveGuest.payment?.fnfDiscount?.toString() || "",
-          // paidAmount: reserveGuest.payment?.advancePayment?.toString() || "",
+          // discount: reserveGuest.payment?.discount?.toString() || "",
+          // paidAmount: reserveGuest.payment?.paidAmount?.toString() || "",
         },
       }));
     }
@@ -291,7 +301,7 @@ export default function BookRoomDialog({
   const calculateDue = useCallback(() => {
     const total = calculateTotal();
     const paid = parseFloat(formData.payment.paidAmount) || 0;
-    const advancePayment = Number(reserveGuest?.payment?.advancePayment || "0");
+    const advancePayment = Number(reserveGuest?.payment?.paidAmount || "0");
     return total - (paid + advancePayment);
   }, [calculateTotal, formData.payment.paidAmount, reserveGuest]);
 
@@ -986,9 +996,7 @@ export default function BookRoomDialog({
                         <span className="font-semibold text-green-600">
                           RM{" "}
                           {Number(formData.payment.paidAmount || "0") +
-                            Number(
-                              reserveGuest?.payment?.advancePayment || "0",
-                            )}
+                            Number(reserveGuest?.payment?.paidAmount || "0")}
                         </span>
                       </div>
                       <Separator />

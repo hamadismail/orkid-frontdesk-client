@@ -33,8 +33,8 @@ interface AmendStayProps {
 export default function AmendStay({ reservation, onClose }: AmendStayProps) {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(reservation.room.arrival),
-    to: new Date(reservation.room.departure),
+    from: new Date(reservation.stay.arrival),
+    to: new Date(reservation.stay.departure),
   });
   const queryClient = useQueryClient();
 

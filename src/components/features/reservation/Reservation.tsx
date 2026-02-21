@@ -72,7 +72,7 @@ export default function Reservation() {
     return allReservations.filter(
       (reservation: IReservation) =>
         reservation.guest.name.toLowerCase().includes(lowerCaseQuery) ||
-        reservation.guest.reservationNo?.toLowerCase().includes(lowerCaseQuery),
+        reservation.guest.refId.toLowerCase().includes(lowerCaseQuery),
     );
   }, [allReservations, searchQuery]);
 
@@ -126,19 +126,19 @@ export default function Reservation() {
                   onClick={() => handleRowClick(reservation)}
                   className="cursor-pointer"
                 >
-                  <TableCell>{reservation.guest.reservationNo}</TableCell>
+                  <TableCell>{reservation.guest.refId}</TableCell>
                   <TableCell>
                     {reservation.guest.name.length
                       ? reservation.guest.name.slice(0, 15) + "..."
                       : reservation.guest.name}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(reservation.room.arrival), "PPP")}
+                    {format(new Date(reservation.stay.arrival), "PPP")}
                   </TableCell>
                   <TableCell>
-                    {format(new Date(reservation.room.departure), "PPP")}
+                    {format(new Date(reservation.stay.departure), "PPP")}
                   </TableCell>
-                  <TableCell>{reservation.guest.ota}</TableCell>
+                  <TableCell>{reservation.guest.otas}</TableCell>
                   <TableCell
                     onClick={(e) => {
                       e.stopPropagation();

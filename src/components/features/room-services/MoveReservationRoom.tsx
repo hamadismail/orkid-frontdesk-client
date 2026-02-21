@@ -36,10 +36,13 @@ export default function MoveReservationRoom({
     queryKey: ["available-rooms-for-reservation", reservation._id],
     queryFn: async () => {
       const { data } = await axios.get<{ data: IRoom[] }>("/rooms");
-      // This is a simplified logic. A real implementation should check for overlapping bookings and reservations.
-      return data?.data?.filter(
-        (r: IRoom) => r.roomNo !== reservation.room.roomNo,
-      );
+
+      const reservationRoomId =
+        typeof reservation.roomId === "string"
+          ? reservation.roomId
+          : reservation.roomId?._id;
+
+      return data?.data?.filter((r: IRoom) => r._id !== reservationRoomId);
     },
     enabled: open,
   });
@@ -52,7 +55,7 @@ export default function MoveReservationRoom({
 
       const { data } = await axios.patch("/reserve", {
         reservationId: reservation._id,
-        roomNo: selectedRoom,
+        roomId: selectedRoom,
       });
 
       return data;
@@ -71,10 +74,12 @@ export default function MoveReservationRoom({
   });
 
   const roomOptions =
-    availableRooms?.map((room) => ({
-      value: room.roomNo,
-      label: `${room.roomNo} - ${room.roomType}`,
-    })) || [];
+    availableRooms
+      ?.filter((room) => room._id) // remove undefined ids
+      .map((room) => ({
+        value: room._id!.toString(),
+        label: `${room.roomNo} - ${room.roomType}`,
+      })) || [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +97,12 @@ export default function MoveReservationRoom({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <p>Current Room: {reservation.room.roomNo}</p>
+            <p>
+              Current Room:{" "}
+              {typeof reservation.roomId === "string"
+                ? reservation.roomId
+                : reservation.roomId?.roomNo}
+            </p>
           </div>
           {isLoading ? (
             <Loader2 className="animate-spin" />

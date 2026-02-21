@@ -44,6 +44,7 @@ import {
   DollarSign,
   Percent,
   Receipt,
+  MessageSquare,
 } from "lucide-react";
 import {
   Form,
@@ -126,21 +127,22 @@ export function NewReservationDialog({
   const form = useForm<z.infer<typeof reservationSchema>>({
     resolver: zodResolver(reservationSchema),
     defaultValues: {
-      reservationNo: "",
-      ota: "",
+      refId: "",
+      otas: "" as OTAS,
       name: "",
       phone: "",
       email: "",
       passport: "",
       roomType: room?.roomType || null,
       roomNo: room?.roomNo || "",
-      numOfGuest: "",
+      remarks: "",
+      // numOfGuest: "",
       arrivalDate: new Date(),
       departureDate: addDays(new Date(), 1),
-      roomDetails: "",
-      otherGuest: "",
-      bookingFee: "0",
-      advancePayment: "",
+      // roomDetails: "",
+      // otherGuest: "",
+      roomPrice: "0",
+      paidAmount: "",
       paymentMethod: PAYMENT_METHOD.CASH,
       sst: "",
       tourismTax: "",
@@ -188,10 +190,10 @@ export function NewReservationDialog({
 
       // Check for overlapping reservations
       const isReserved = allReservations.some((reservation) => {
-        const reservationStart = new Date(reservation.room.arrival);
-        const reservationEnd = new Date(reservation.room.departure);
+        const reservationStart = new Date(reservation.stay.arrival);
+        const reservationEnd = new Date(reservation.stay.departure);
         return (
-          reservation.room.roomNo === room.roomNo &&
+          reservation.roomId === room._id &&
           selectedInterval.start <= reservationEnd &&
           selectedInterval.end >= reservationStart
         );
@@ -217,31 +219,37 @@ export function NewReservationDialog({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {
       const payload = {
         guest: {
-          reservationNo: data.reservationNo,
-          ota: data.ota,
+          refId: data.refId,
+          otas: data.otas,
           name: data.name,
           email: data.email,
           phone: data.phone,
           passport: data.passport,
         },
-        room: {
-          roomNo: data.roomNo,
-          numOfGuest: data.numOfGuest,
+        stay: {
+          // roomNo: data.roomNo,
+          // numOfGuest: data.numOfGuest,
           arrival: data.arrivalDate,
           departure: data.departureDate,
-          roomDetails: data.roomDetails,
-          otherGuest: data.otherGuest,
+          adults: 1,
+          children: 0,
+          // roomDetails: data.roomDetails,
+          // otherGuest: data.otherGuest,
         },
         payment: {
-          bookingFee: parseFloat(data.bookingFee),
-          advancePayment: parseFloat(data.advancePayment || "0"),
+          roomPrice: parseFloat(data.roomPrice),
+          paidAmount: parseFloat(data.paidAmount || "0"),
           sst: parseFloat(data.sst || "0"),
           tourismTax: parseFloat(data.tourismTax || "0"),
-          fnfDiscount: parseFloat(data.discount || "0"),
+          discount: parseFloat(data.discount || "0"),
+          subtotal: parseFloat(calculateTotalAmount()),
+          dueAmount: parseFloat(calculateDueAmount()),
           paymentMethod: data.paymentMethod,
+          remarks: data.remarks,
         },
-        reservationDate: new Date().toISOString(),
+        // reservationDate: new Date().toISOString(),
         isDeleted: false,
+        roomId: availableRooms.find((r) => r.roomNo === data.roomNo)?._id,
       };
 
       const { data: response } = await axios.post("/reserve", payload);
@@ -276,10 +284,10 @@ export function NewReservationDialog({
   const handleNext = async () => {
     let fieldsToValidate: (keyof z.infer<typeof reservationSchema>)[] = [];
 
-    if (step === 1) fieldsToValidate = ["name", "phone", "reservationNo"];
+    if (step === 1) fieldsToValidate = ["name", "phone", "refId", "otas"];
     else if (step === 2)
       fieldsToValidate = ["arrivalDate", "departureDate", "roomType", "roomNo"];
-    else if (step === 3) fieldsToValidate = ["bookingFee", "paymentMethod"];
+    else if (step === 3) fieldsToValidate = ["roomPrice", "paymentMethod"];
 
     const isStepValid = await form.trigger(fieldsToValidate);
     if (!isStepValid) {
@@ -308,19 +316,22 @@ export function NewReservationDialog({
       guest: {
         name: reservationData.guest.name,
         phone: reservationData.guest.phone,
-        otas: reservationData.guest.ota,
-        reservationNo: reservationData.guest.reservationNo,
+        otas: reservationData.guest.otas,
+        refId: reservationData.guest.refId,
       },
       stay: {
-        arrival: new Date(reservationData.room.arrival),
-        departure: new Date(reservationData.room.departure),
+        arrival: new Date(reservationData.stay.arrival),
+        departure: new Date(reservationData.stay.departure),
       },
       room: {
-        number: reservationData.room.roomNo,
+        number:
+          reservationData.roomId && typeof reservationData.roomId === "object"
+            ? reservationData.roomId.roomNo
+            : "",
         type: form.getValues("roomType") || "",
       },
       payment: {
-        paidAmount: reservationData.payment.advancePayment || 0,
+        paidAmount: reservationData.payment.paidAmount || 0,
         deposit: 0,
         method: form.getValues("paymentMethod"),
         remarks: reservationData.payment.remarks,
@@ -329,6 +340,29 @@ export function NewReservationDialog({
       paymentId: reservationData._id?.toUpperCase(),
     };
   }, [reservationData, form]);
+
+  const calculateTotalAmount = () => {
+    const roomPrice = parseFloat(form.watch("roomPrice") || "0");
+    const totalRoomPrice = roomPrice * stayDuration;
+    const sst = parseFloat(form.watch("sst") || "0");
+    const tourismTax = parseFloat(form.watch("tourismTax") || "0");
+    //////
+    // const paidAmount = parseFloat(form.watch("paidAmount") || "0");
+    // const discount = parseFloat(form.watch("discount") || "0");
+
+    const subtotal = totalRoomPrice + sst + tourismTax;
+
+    return subtotal.toFixed(2);
+  };
+
+  const calculateDueAmount = () => {
+    const totalAmount = parseFloat(calculateTotalAmount());
+    const paidAmount = parseFloat(form.watch("paidAmount") || "0");
+    const discount = parseFloat(form.watch("discount") || "0");
+
+    const dueAmount = totalAmount - paidAmount - discount;
+    return dueAmount.toFixed(2);
+  };
 
   const isLoading = isLoadingRooms || isLoadingBookings;
 
@@ -498,7 +532,7 @@ export function NewReservationDialog({
 
                       <FormField
                         control={form.control}
-                        name="ota"
+                        name="otas"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
@@ -529,7 +563,7 @@ export function NewReservationDialog({
 
                       <FormField
                         control={form.control}
-                        name="reservationNo"
+                        name="refId"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
@@ -780,12 +814,12 @@ export function NewReservationDialog({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="bookingFee"
+                            name="roomPrice"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4" />
-                                  Booking Fee *
+                                  Room Price *
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -801,7 +835,7 @@ export function NewReservationDialog({
 
                           <FormField
                             control={form.control}
-                            name="advancePayment"
+                            name="paidAmount"
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="flex items-center gap-2">
@@ -866,7 +900,7 @@ export function NewReservationDialog({
                             control={form.control}
                             name="discount"
                             render={({ field }) => (
-                              <FormItem className="md:col-span-2">
+                              <FormItem>
                                 <FormLabel className="flex items-center gap-2">
                                   <Percent className="h-4 w-4" />
                                   Discount (optional)
@@ -874,6 +908,27 @@ export function NewReservationDialog({
                                 <FormControl>
                                   <Input
                                     type="number"
+                                    {...field}
+                                    className="h-10"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="remarks"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <MessageSquare className="h-4 w-4" />
+                                  Remarks *
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="text"
                                     {...field}
                                     className="h-10"
                                   />
@@ -943,24 +998,32 @@ export function NewReservationDialog({
                                 {selectedRoomType || "Not selected"}
                               </span>
                             </div>
-                            <Separator />
-                            <div className="flex justify-between font-medium">
-                              <span>Booking fee</span>
+                            <div className="flex justify-between text-sm">
+                              <span>Room Price</span>
                               <span>
                                 RM{" "}
                                 {parseFloat(
-                                  form.watch("bookingFee") || "0",
+                                  form.watch("roomPrice") || "0",
                                 ).toFixed(2)}
                               </span>
                             </div>
+                            <Separator />
                             <div className="flex justify-between text-sm text-green-600">
                               <span>Advance payment</span>
                               <span>
                                 RM{" "}
                                 {parseFloat(
-                                  form.watch("advancePayment") || "0",
+                                  form.watch("paidAmount") || "0",
                                 ).toFixed(2)}
                               </span>
+                            </div>
+                            <div className="flex justify-between font-medium">
+                              <span>Total Amount</span>
+                              <span>RM {calculateTotalAmount()}</span>
+                            </div>
+                            <div className="flex justify-between font-medium">
+                              <span>Due Amount</span>
+                              <span>RM {calculateDueAmount()}</span>
                             </div>
                           </CardContent>
                         </Card>
@@ -1000,7 +1063,8 @@ export function NewReservationDialog({
                           <div className="text-right">
                             <div className="text-muted-foreground">Room</div>
                             <div className="font-medium">
-                              {reservationData.room.roomNo}
+                              {reservationData.roomId &&
+                                typeof reservationData.roomId === "object"}
                             </div>
                           </div>
                           <div className="text-left">
@@ -1009,7 +1073,7 @@ export function NewReservationDialog({
                             </div>
                             <div className="font-medium">
                               {format(
-                                new Date(reservationData.room.arrival),
+                                new Date(reservationData.stay.arrival),
                                 "MMM d, yyyy",
                               )}
                             </div>
@@ -1020,7 +1084,7 @@ export function NewReservationDialog({
                             </div>
                             <div className="font-medium">
                               {format(
-                                new Date(reservationData.room.departure),
+                                new Date(reservationData.stay.departure),
                                 "MMM d, yyyy",
                               )}
                             </div>

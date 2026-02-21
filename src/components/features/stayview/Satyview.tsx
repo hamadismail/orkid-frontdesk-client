@@ -406,14 +406,16 @@ function StayViewPage() {
 
                         {/* Render Reservations */}
                         {allReservations
-                          .filter(
-                            (res: IReservation) =>
-                              res.room.roomNo === room.roomNo,
+                          .filter((res: IReservation) =>
+                            typeof res.roomId === "string"
+                              ? res.roomId === room._id?.toString()
+                              : res.roomId?._id.toString() ===
+                                room._id?.toString(),
                           )
                           .map((reservation: IReservation) => {
                             const position = calculateBookingPosition(
-                              reservation.room.arrival,
-                              reservation.room.departure,
+                              reservation.stay.arrival,
+                              reservation.stay.departure,
                             );
 
                             if (!position) return null;
@@ -445,12 +447,12 @@ function StayViewPage() {
                                 title={`${
                                   reservation.guest.name
                                 } (RESERVATION)\n${format(
-                                  new Date(reservation.room.arrival),
+                                  new Date(reservation.stay.arrival),
                                   "MMM d, yyyy",
                                 )} - ${format(
-                                  new Date(reservation.room.departure),
+                                  new Date(reservation.stay.departure),
                                   "MMM d, yyyy",
-                                )}\nRoom: ${reservation.room.roomNo || "TBA"}`}
+                                )}\nRoom: ${reservation.roomId || "TBA"}`}
                               >
                                 <div className="flex flex-col items-center justify-center h-full text-center px-2 py-1">
                                   <div className="font-bold text-sm leading-tight mb-1 drop-shadow-sm">
@@ -460,12 +462,12 @@ function StayViewPage() {
                                   </div>
                                   <div className="text-xs opacity-90 font-medium">
                                     {format(
-                                      new Date(reservation.room.arrival),
+                                      new Date(reservation.stay.arrival),
                                       "d",
                                     )}{" "}
                                     -{" "}
                                     {format(
-                                      new Date(reservation.room.departure),
+                                      new Date(reservation.stay.departure),
                                       "d",
                                     )}
                                   </div>

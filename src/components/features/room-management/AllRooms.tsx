@@ -59,15 +59,18 @@ function AllRooms() {
 
     // Check if room is reserved on selected date
     const isReserved = allReservations.some((reservation: IReservation) => {
-      const arrival = new Date(reservation.room.arrival).setHours(0, 0, 0, 0);
-      const departure = new Date(reservation.room.departure).setHours(
+      const arrival = new Date(reservation.stay.arrival).setHours(0, 0, 0, 0);
+      const departure = new Date(reservation.stay.departure).setHours(
         0,
         0,
         0,
         0,
       );
       return (
-        reservation.room.roomNo === room.roomNo &&
+        !!room?._id &&
+        (typeof reservation.roomId === "string"
+          ? reservation.roomId === room._id.toString()
+          : reservation.roomId?._id?.toString() === room._id.toString()) &&
         arrival <= selected &&
         departure >= selected
       );
@@ -107,10 +110,18 @@ function AllRooms() {
 
     // Find reservation for this room on selected date
     const reservation = allReservations.find((r: IReservation) => {
-      const arrival = new Date(r.room.arrival).setHours(0, 0, 0, 0);
-      const departure = new Date(r.room.departure).setHours(0, 0, 0, 0);
+      const arrival = new Date(r.stay.arrival).setHours(0, 0, 0, 0);
+      const departure = new Date(r.stay.departure).setHours(0, 0, 0, 0);
+
+      if (!room?._id) return false;
+
+      const roomIdStr = room._id.toString();
+
+      const reservationRoomId =
+        typeof r.roomId === "string" ? r.roomId : r.roomId?._id?.toString();
+
       return (
-        r.room.roomNo === room.roomNo &&
+        reservationRoomId === roomIdStr &&
         arrival <= selected &&
         departure >= selected
       );
@@ -158,8 +169,8 @@ function AllRooms() {
       roomStatus = RoomStatus.RESERVED;
       guestName = reservation.guest.name;
       guestStatus = GUEST_STATUS.RESERVED;
-      arrival = reservation.room.arrival;
-      departure = reservation.room.departure;
+      arrival = reservation.stay.arrival;
+      departure = reservation.stay.departure;
     }
 
     return {
@@ -184,18 +195,21 @@ function AllRooms() {
 
   const reservedCount = allRooms.filter((room: IRoom) => {
     const isReserved = allReservations.some((reservation: IReservation) => {
-      const arrival = new Date(reservation.room.arrival).setHours(0, 0, 0, 0);
-      const departure = new Date(reservation.room.departure).setHours(
+      const arrival = new Date(reservation.stay.arrival).setHours(0, 0, 0, 0);
+      const departure = new Date(reservation.stay.departure).setHours(
         0,
         0,
         0,
         0,
       );
       return (
-        reservation.room.roomNo === room.roomNo &&
         room.roomStatus !== RoomStatus.OCCUPIED &&
         room.roomStatus !== RoomStatus.DUE_OUT &&
         room.roomStatus !== RoomStatus.SERVICE &&
+        !!room?._id &&
+        (typeof reservation.roomId === "string"
+          ? reservation.roomId === room._id.toString()
+          : reservation.roomId?._id?.toString() === room._id.toString()) &&
         arrival <= selected &&
         departure >= selected
       );
@@ -219,15 +233,18 @@ function AllRooms() {
 
   const availableCount = allRooms.filter((room: IRoom) => {
     const isReserved = allReservations.some((reservation: IReservation) => {
-      const arrival = new Date(reservation.room.arrival).setHours(0, 0, 0, 0);
-      const departure = new Date(reservation.room.departure).setHours(
+      const arrival = new Date(reservation.stay.arrival).setHours(0, 0, 0, 0);
+      const departure = new Date(reservation.stay.departure).setHours(
         0,
         0,
         0,
         0,
       );
       return (
-        reservation.room.roomNo === room.roomNo &&
+        !!room?._id &&
+        (typeof reservation.roomId === "string"
+          ? reservation.roomId === room._id.toString()
+          : reservation.roomId?._id?.toString() === room._id.toString()) &&
         arrival <= selected &&
         departure >= selected
       );
@@ -249,7 +266,9 @@ function AllRooms() {
           <div className="flex items-center gap-2 border-r pr-4">
             <Calendar className="h-4 w-4 text-primary" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Current Date</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                Current Date
+              </span>
               <span className="text-sm font-bold">
                 {currentTime?.toLocaleDateString(undefined, {
                   weekday: "short",
@@ -263,7 +282,9 @@ function AllRooms() {
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-primary" />
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Local Time</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                Local Time
+              </span>
               <span className="text-sm font-bold tabular-nums">
                 {currentTime?.toLocaleTimeString(undefined, {
                   hour: "2-digit",

@@ -101,32 +101,18 @@ export function GuestDetailsDialog({
 }: GuestDetailsDialogProps) {
   if (!selectedGuest) return null;
 
-  const { guest } = selectedGuest;
-  const hasStayInfo = "stay" in selectedGuest;
-  const hasPaymentInfo = "payment" in selectedGuest;
-  const payment = hasPaymentInfo ? selectedGuest.payment : null;
+  const { guest, stay, payment } = selectedGuest;
 
-  const getCountry = () =>
-    "country" in guest ? guest.country : guest.nationality;
-  const getOta = () => ("otas" in guest ? guest.otas : guest.ota);
-  const getRefId = () => ("refId" in guest ? guest.refId : guest.reservationNo);
-  const getArrivalDate = () =>
-    hasStayInfo ? selectedGuest.stay.arrival : selectedGuest.room.arrival;
-  const getDepartureDate = () =>
-    hasStayInfo ? selectedGuest.stay.departure : selectedGuest.room.departure;
-  const getAdults = () =>
-    hasStayInfo ? selectedGuest.stay.adults : selectedGuest.room.numOfGuest;
   const getRoomNumber = () => {
     if ("roomId" in selectedGuest && selectedGuest.roomId) {
       return (selectedGuest.roomId as { roomNo: string }).roomNo;
     }
-    return "room" in selectedGuest ? selectedGuest.room.roomNo : "N/A";
   };
+
   const getRoomType = () => {
     if ("roomId" in selectedGuest && selectedGuest.roomId) {
       return (selectedGuest.roomId as { roomType: string }).roomType;
     }
-    return "room" in selectedGuest ? selectedGuest.room.roomType : "N/A";
   };
 
   const guestNameInitial = guest.name
@@ -173,18 +159,26 @@ export function GuestDetailsDialog({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pl-7">
                 <DetailItem icon={Mail} label="Email" value={guest.email} />
                 <DetailItem icon={Phone} label="Phone" value={guest.phone} />
-                <DetailItem icon={Globe} label="Country" value={getCountry()} />
+                <DetailItem
+                  icon={Globe}
+                  label="Country"
+                  value={guest.country || "N/A"}
+                />
                 <DetailItem
                   icon={Fingerprint}
                   label="Passport"
                   value={guest.passport}
                 />
-                <DetailItem icon={Plane} label="OTA" value={getOta()} />
+                <DetailItem
+                  icon={Plane}
+                  label="OTA"
+                  value={guest.otas || "N/A"}
+                />
 
                 <DetailItem
                   icon={Hash}
                   label="Reference ID"
-                  value={getRefId()}
+                  value={guest.refId || "N/A"}
                 />
               </div>
             </div>
@@ -201,21 +195,25 @@ export function GuestDetailsDialog({
                 <DetailItem
                   icon={CalendarDays}
                   label="Arrival"
-                  value={format(new Date(getArrivalDate()), "PPP")}
+                  value={format(new Date(stay.arrival), "PPP")}
                 />
                 <DetailItem
                   icon={CalendarDays}
                   label="Departure"
-                  value={format(new Date(getDepartureDate()), "PPP")}
+                  value={format(new Date(stay.departure), "PPP")}
                 />
-                <DetailItem icon={Users} label="Adults" value={getAdults()} />
-                {hasStayInfo && (
-                  <DetailItem
-                    icon={Users}
-                    label="Children"
-                    value={selectedGuest.stay.children}
-                  />
-                )}
+                <DetailItem
+                  icon={Users}
+                  label="Adults"
+                  value={stay.adults || 0}
+                />
+
+                <DetailItem
+                  icon={Users}
+                  label="Children"
+                  value={stay.children || 0}
+                />
+
                 <DetailItem
                   icon={BedDouble}
                   label="Room"
@@ -260,11 +258,15 @@ export function GuestDetailsDialog({
                     amount={payment.dueAmount}
                     className="text-red-600 font-bold"
                   />
-                  <PaymentRow
-                    label="Deposit"
-                    amount={payment.deposit}
-                    className="text-blue-600"
-                  />
+                  {payment &&
+                    "deposit" in payment &&
+                    payment.deposit && (
+                      <PaymentRow
+                        label="Deposit"
+                        amount={payment.deposit || 0}
+                        className="text-blue-600"
+                      />
+                    )}
                   <Separator />
                   <PaymentRow
                     label="Payment Method"
@@ -305,7 +307,7 @@ export function GuestDetailsDialog({
                 />
               </>
             )}
-            {"reservationDate" in selectedGuest && (
+            {"isDeleted" in selectedGuest && !selectedGuest.isDeleted && (
               <>
                 <AmendStay
                   reservation={selectedGuest as IReservation}

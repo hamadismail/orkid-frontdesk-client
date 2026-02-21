@@ -54,21 +54,21 @@ export default function ReservationInvoice({
 
   const calculateNights = () => {
     const diffTime = Math.abs(
-      new Date(bookingInfo.room.departure).getTime() -
-        new Date(bookingInfo.room.arrival).getTime(),
+      new Date(bookingInfo.stay.departure).getTime() -
+        new Date(bookingInfo.stay.arrival).getTime(),
     );
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
   const calculateTotal = () => {
-    const roomPrice = bookingInfo.payment.bookingFee;
-    const advancePayment = bookingInfo.payment.advancePayment;
-    const tourismTax = bookingInfo.payment.tourismTax;
-    const sst = bookingInfo.payment.sst;
-    const fnfDiscount = bookingInfo.payment.fnfDiscount;
+    const roomPrice = bookingInfo.payment.roomPrice || 0;
+    const advancePayment = bookingInfo.payment.paidAmount || 0;
+    const tourismTax = bookingInfo.payment.tourismTax || 0;
+    const sst = bookingInfo.payment.sst || 0;
+    const discount = bookingInfo.payment.discount || 0;
 
     const totalAmount =
-      roomPrice + tourismTax + sst - (fnfDiscount + advancePayment);
+      roomPrice + tourismTax + sst - (discount + advancePayment);
     return totalAmount.toFixed(2) || 0;
   };
 
@@ -100,7 +100,7 @@ export default function ReservationInvoice({
               <div className="grid grid-cols-[auto_1fr] gap-2 text-sm">
                 <div className="font-medium">Reservation No. / OTA:</div>
                 <div>
-                  {bookingInfo.guest.reservationNo || bookingInfo.guest.ota}
+                  {bookingInfo.guest.refId || bookingInfo.guest.otas || "-"}
                 </div>
 
                 <div className="font-medium">Name:</div>
@@ -112,8 +112,8 @@ export default function ReservationInvoice({
                 <div className="font-medium">Email:</div>
                 <div>{bookingInfo.guest.email || "-"}</div>
 
-                <div className="font-medium">Nationality:</div>
-                <div>{bookingInfo.guest.nationality || "-"}</div>
+                {/* <div className="font-medium">Nationality:</div>
+                <div>{bookingInfo.guest.country || "-"}</div> */}
 
                 <div className="font-medium">Passport:</div>
                 <div>{bookingInfo.guest.passport || "-"}</div>
@@ -124,16 +124,20 @@ export default function ReservationInvoice({
               <h2 className="text-lg font-semibold mb-2">Booking Details</h2>
               <div className="grid grid-cols-[auto_1fr] gap-2 text-sm">
                 <div className="font-medium">Room No:</div>
-                <div>{bookingInfo.room.roomNo || "-"}</div>
+                <div>
+                  {typeof bookingInfo.roomId === "string"
+                    ? bookingInfo.roomId
+                    : bookingInfo.roomId?.roomNo || "-"}
+                </div>
 
-                <div className="font-medium">No. of Guests:</div>
-                <div>{bookingInfo.room.numOfGuest || "-"}</div>
+                {/* <div className="font-medium">No. of Guests:</div>
+                <div>{bookingInfo.room.numOfGuest || "-"}</div> */}
 
                 <div className="font-medium">Arrival:</div>
-                <div>{format(bookingInfo.room.arrival, "PPp")}</div>
+                <div>{format(bookingInfo.stay.arrival, "PPp")}</div>
 
                 <div className="font-medium">Departure:</div>
-                <div>{format(bookingInfo.room.departure, "PPp")}</div>
+                <div>{format(bookingInfo.stay.departure, "PPp")}</div>
 
                 <div className="font-medium">Nights:</div>
                 <div>{calculateNights()}</div>
@@ -158,8 +162,8 @@ export default function ReservationInvoice({
             <div className="grid grid-cols-2 p-2 border-t text-sm">
               <div>Room Charges ({calculateNights()} nights)</div>
               <div className="text-right">
-                {bookingInfo.payment.bookingFee
-                  ? bookingInfo.payment.bookingFee.toFixed(2)
+                {bookingInfo.payment.roomPrice
+                  ? bookingInfo.payment.roomPrice.toFixed(2)
                   : 0}
               </div>
             </div>
@@ -186,8 +190,8 @@ export default function ReservationInvoice({
               <div>FnF Discount</div>
               <div className="text-right text-destructive">
                 -
-                {bookingInfo.payment.fnfDiscount
-                  ? bookingInfo.payment.fnfDiscount.toFixed(2)
+                {bookingInfo.payment.discount
+                  ? bookingInfo.payment.discount.toFixed(2)
                   : 0}
               </div>
             </div>
@@ -195,8 +199,8 @@ export default function ReservationInvoice({
             <div className="grid grid-cols-2 p-2 border-t text-sm">
               <div>Advanced Payment</div>
               <div className="text-right">
-                {bookingInfo.payment.advancePayment
-                  ? bookingInfo.payment.advancePayment.toFixed(2)
+                {bookingInfo.payment.paidAmount
+                  ? bookingInfo.payment.paidAmount.toFixed(2)
                   : 0}
               </div>
             </div>
