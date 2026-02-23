@@ -217,6 +217,8 @@ export function NewReservationDialog({
   // Mutation
   const { mutate: reserveRoom, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {
+      const selectedRoom = availableRooms.find((r) => r.roomNo === data.roomNo);
+
       const payload = {
         guest: {
           refId: data.refId,
@@ -231,8 +233,8 @@ export function NewReservationDialog({
           // numOfGuest: data.numOfGuest,
           arrival: data.arrivalDate,
           departure: data.departureDate,
-          adults: 1,
-          children: 0,
+          adults: selectedRoom?.adults ?? room?.adults ?? 1,
+          children: selectedRoom?.children ?? room?.children ?? 0,
           // roomDetails: data.roomDetails,
           // otherGuest: data.otherGuest,
         },
@@ -249,7 +251,7 @@ export function NewReservationDialog({
         },
         // reservationDate: new Date().toISOString(),
         isDeleted: false,
-        roomId: availableRooms.find((r) => r.roomNo === data.roomNo)?._id,
+        roomId: selectedRoom?._id,
       };
 
       const { data: response } = await axios.post("/reserve", payload);
@@ -258,7 +260,18 @@ export function NewReservationDialog({
         queryClient.invalidateQueries({ queryKey: ["reserve"] });
         // Express backend wraps response in 'data'
         const booking = response.data?.booking || response.data;
-        setReservationData(booking);
+        const normalizedBooking =
+          typeof booking?.roomId === "string" && selectedRoom
+            ? {
+                ...booking,
+                roomId: {
+                  _id: booking.roomId,
+                  roomNo: selectedRoom.roomNo,
+                  roomType: selectedRoom.roomType,
+                },
+              }
+            : booking;
+        setReservationData(normalizedBooking);
         return response;
       } else {
         throw new Error(response?.message || "Reservation failed");
@@ -1103,7 +1116,7 @@ export function NewReservationDialog({
                         className="gap-2"
                       >
                         <Printer className="h-4 w-4" />
-                        Payment Invoice
+                        Payment Receipt
                       </Button>
                       <Button
                         type="button"
@@ -1186,7 +1199,7 @@ export function NewReservationDialog({
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <DialogTitle className="text-lg font-semibold">
               {invoiceType === "payment"
-                ? "Payment Invoice"
+                ? "Payment Receipt"
                 : "Reservation Voucher"}
             </DialogTitle>
           </DialogHeader>

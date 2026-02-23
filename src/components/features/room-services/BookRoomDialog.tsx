@@ -191,8 +191,8 @@ export default function BookRoomDialog({
     stay: {
       arrival: new Date(),
       departure: undefined,
-      adults: 1,
-      children: 0,
+      adults: room.adults ?? 1,
+      children: room.children ?? 0,
     },
     payment: {
       roomPrice: "",
@@ -269,6 +269,8 @@ export default function BookRoomDialog({
           departure: reserveGuest.stay?.departure
             ? new Date(reserveGuest.stay.departure)
             : prev.stay.departure,
+          adults: reserveGuest.stay.adults ?? 1,
+          children: reserveGuest.stay.children ?? 0,
         },
         payment: {
           ...prev.payment,
@@ -377,11 +379,11 @@ export default function BookRoomDialog({
         status: GUEST_STATUS.CHECKED_IN,
       },
       stay: {
-        arrival: new Date(),
-        departure: undefined,
-        adults: 1,
-        children: 0,
-      },
+      arrival: new Date(),
+      departure: undefined,
+      adults: room.adults ?? 1,
+      children: room.children ?? 0,
+    },
       payment: {
         roomPrice: "",
         sst: "",
@@ -1106,3 +1108,7 @@ export default function BookRoomDialog({
     </Dialog>
   );
 }
+
+
+
+

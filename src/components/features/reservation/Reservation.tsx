@@ -180,7 +180,7 @@ export default function Reservation() {
         >
           <DialogContent className="min-w-4xl max-h-[90vh] overflow-auto">
             <DialogHeader>
-              <DialogTitle>Reservation Invoice</DialogTitle>
+              <DialogTitle>Reservation Voucher</DialogTitle>
             </DialogHeader>
             <ReservationInvoice
               bookingInfo={selectedReservationForPrint}

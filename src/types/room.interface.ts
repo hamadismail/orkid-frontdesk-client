@@ -26,6 +26,9 @@ export interface IRoom {
   roomNo: string;
   roomType: RoomType;
   roomFloor: string;
-  // isBooked: boolean;
   roomStatus: RoomStatus;
+  adults: number;
+  children: number;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

@@ -122,6 +122,12 @@ export default function ReservationInvoice({
 
                 <div className="font-medium">Passport:</div>
                 <div>{bookingInfo.guest.passport || "-"}</div>
+
+                <div className="font-medium">Number of Guest: </div>
+                <div>
+                  {bookingInfo.stay.adults ?? 1} Adults &{" "}
+                  {bookingInfo.stay.children ?? 0} Children
+                </div>
               </div>
             </div>
 
@@ -133,6 +139,13 @@ export default function ReservationInvoice({
                   {typeof bookingInfo.roomId === "string"
                     ? bookingInfo.roomId
                     : bookingInfo.roomId?.roomNo || "-"}
+                </div>
+
+                <div className="font-medium">Room Type:</div>
+                <div>
+                  {typeof bookingInfo.roomId === "string"
+                    ? "-"
+                    : bookingInfo.roomId?.roomType || "-"}
                 </div>
 
                 {/* <div className="font-medium">No. of Guests:</div>
@@ -294,7 +307,7 @@ export default function ReservationInvoice({
           onClick={handleConfirmAndPrint}
           disabled={isPending}
         >
-          Print Invoice
+          Print Voucher
         </Button>
       </div>
     </div>

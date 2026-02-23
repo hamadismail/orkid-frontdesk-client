@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   format,
   addDays,
@@ -31,9 +31,15 @@ import { getAllRooms } from "@/src/services/room.service";
 import { getAllBookings } from "@/src/services/booking.service";
 import { getAllReservations } from "@/src/services/reservation.service";
 
-const VIEW_DAYS = 14; // Show 21 days at a time for better monthly view
+const DESKTOP_MIN_VIEW_DAYS = 14;
+const SMALL_SCREEN_MIN_VIEW_DAYS = 1;
 
-const DAY_WIDTH = 58; // Define a constant for the width of a single day column
+const MAX_VIEW_DAYS = 31;
+
+const DESKTOP_DAY_WIDTH = 58;
+const MOBILE_DAY_WIDTH = 44;
+const DESKTOP_ROOM_COLUMN_WIDTH = 180;
+const MOBILE_ROOM_COLUMN_WIDTH = 130;
 
 function StayViewPage() {
   const { data: rooms, isLoading: RoomLoading } = useQuery({
@@ -59,11 +65,63 @@ function StayViewPage() {
   >(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const endDate = addDays(startDate, VIEW_DAYS - 1);
+  const gridContainerRef = useRef<HTMLDivElement>(null);
+  const [viewDays, setViewDays] = useState(DESKTOP_MIN_VIEW_DAYS);
+  const [dayWidth, setDayWidth] = useState(DESKTOP_DAY_WIDTH);
+  const [roomColumnWidth, setRoomColumnWidth] = useState(
+    DESKTOP_ROOM_COLUMN_WIDTH,
+  );
+  const isStayViewLoading = RoomLoading || BookingLoading || ReserveLoading;
+
+  useEffect(() => {
+    if (isStayViewLoading || !gridContainerRef.current) {
+      return;
+    }
+
+    const gridElement = gridContainerRef.current;
+
+    const updateViewDays = () => {
+      const containerWidth = gridElement.clientWidth;
+      const isDesktop = containerWidth >= 768;
+      const nextRoomColumnWidth = isDesktop
+        ? DESKTOP_ROOM_COLUMN_WIDTH
+        : MOBILE_ROOM_COLUMN_WIDTH;
+      const nextDayWidth = isDesktop ? DESKTOP_DAY_WIDTH : MOBILE_DAY_WIDTH;
+
+      const calculatedDays = Math.max(
+        1,
+        Math.floor((containerWidth - nextRoomColumnWidth) / nextDayWidth),
+      );
+      const minDays = isDesktop
+        ? DESKTOP_MIN_VIEW_DAYS
+        : SMALL_SCREEN_MIN_VIEW_DAYS;
+      const nextViewDays = Math.max(
+        minDays,
+        Math.min(MAX_VIEW_DAYS, calculatedDays),
+      );
+
+      setRoomColumnWidth(nextRoomColumnWidth);
+      setDayWidth(nextDayWidth);
+      setViewDays(nextViewDays);
+    };
+
+    const rafId = requestAnimationFrame(updateViewDays);
+    const resizeObserver = new ResizeObserver(updateViewDays);
+    resizeObserver.observe(gridElement);
+
+    window.addEventListener("resize", updateViewDays);
+    return () => {
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateViewDays);
+    };
+  }, [isStayViewLoading]);
+
+  const endDate = addDays(startDate, viewDays - 1);
   const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const handleNext = () => setStartDate(addDays(startDate, VIEW_DAYS));
-  const handlePrev = () => setStartDate(subDays(startDate, VIEW_DAYS));
+  const handleNext = () => setStartDate(addDays(startDate, viewDays));
+  const handlePrev = () => setStartDate(subDays(startDate, viewDays));
   const handleToday = () => setStartDate(startOfWeek(new Date()));
 
   const handleViewGuest = (guest: IBook | IReservation) => {
@@ -180,15 +238,18 @@ function StayViewPage() {
       </div>
 
       {/* Stay View Grid */}
-      {RoomLoading || BookingLoading || ReserveLoading ? (
+      {isStayViewLoading ? (
         <LoadingSpiner />
       ) : (
-        <div className="bg-white rounded-lg shadow-lg overflow-x-auto overflow-y-hidden">
+        <div
+          ref={gridContainerRef}
+          className="bg-white rounded-lg shadow-lg overflow-x-auto overflow-y-hidden"
+        >
           <div
             className="inline-grid w-full"
             style={{
-              gridTemplateColumns: `180px repeat(${VIEW_DAYS}, ${DAY_WIDTH}px)`,
-              minWidth: `${180 + VIEW_DAYS * DAY_WIDTH}px`,
+              gridTemplateColumns: `${roomColumnWidth}px repeat(${viewDays}, ${dayWidth}px)`,
+              minWidth: `${roomColumnWidth + viewDays * dayWidth}px`,
             }}
           >
             {/* Date Header */}
@@ -297,7 +358,7 @@ function StayViewPage() {
                       <div
                         className="col-start-2 col-span-full grid relative"
                         style={{
-                          gridTemplateColumns: `repeat(${VIEW_DAYS}, ${DAY_WIDTH}px)`,
+                          gridTemplateColumns: `repeat(${viewDays}, ${dayWidth}px)`,
                           minHeight: "60px",
                         }}
                       >
@@ -369,7 +430,7 @@ function StayViewPage() {
                                   gridColumnStart: startDayIndex + 1,
                                   gridColumnEnd: `span ${duration}`,
                                   minHeight: "54px",
-                                  minWidth: `${duration * DAY_WIDTH}px`,
+                                  minWidth: `${duration * dayWidth}px`,
                                 }}
                                 title={`${booking.guest.name}\n${format(
                                   new Date(booking.stay.arrival),
@@ -442,7 +503,7 @@ function StayViewPage() {
                                   gridColumnEnd: `span ${duration}`,
                                   minHeight: "54px",
                                   // minWidth: `minmax(${duration * DAY_WIDTH}px, ${duration}fr)`,
-                                  minWidth: `${duration * DAY_WIDTH}px`,
+                                  minWidth: `${duration * dayWidth}px`,
                                 }}
                                 title={`${
                                   reservation.guest.name
