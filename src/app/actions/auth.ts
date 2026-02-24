@@ -3,7 +3,8 @@
 import { cookies } from "next/headers";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://orkidfrontdesk-server.vercel.app/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://orkidfrontdesk-server.vercel.app/api/v1";
 
 type AuthActionResult = {
   success: boolean;
@@ -45,7 +46,7 @@ export async function loginAction(
 
     cookieStore.set("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24,
@@ -53,7 +54,7 @@ export async function loginAction(
 
     cookieStore.set("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 30,

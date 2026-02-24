@@ -140,7 +140,7 @@ const forwardRequest = async (
     const proxyResponse = await toProxyResponse(retryResponse);
     proxyResponse.cookies.set("accessToken", newAccessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24,
