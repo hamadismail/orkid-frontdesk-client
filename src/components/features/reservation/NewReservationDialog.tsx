@@ -76,6 +76,7 @@ import { reservationSchema } from "./reservation.schema";
 import { Label } from "../../ui/label";
 import { getAllRooms } from "@/src/services/room.service";
 import { getAllBookings } from "@/src/services/booking.service";
+import { PreviousGuestSearch } from "../guest/PreviousGuestSearch";
 
 interface NewReservationDialogProps {
   allReservations: IReservation[];
@@ -102,6 +103,7 @@ export function NewReservationDialog({
     null,
   );
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedGuest, setSelectedGuest] = useState<IBook | null>(null);
   const [invoiceType, setInvoiceType] = useState<"payment" | "reservation">(
     "reservation",
   );
@@ -319,6 +321,7 @@ export function NewReservationDialog({
   const handleReset = () => {
     form.reset();
     setStep(1);
+    setSelectedGuest(null);
     setReservationData(null);
   };
 
@@ -379,6 +382,48 @@ export function NewReservationDialog({
 
   const isLoading = isLoadingRooms || isLoadingBookings;
 
+  const handleGuestSelection = (guest: IBook) => {
+    setSelectedGuest(guest);
+
+    form.setValue("name", guest.guest.name, { shouldDirty: true });
+    form.setValue("phone", guest.guest.phone || "", { shouldDirty: true });
+    form.setValue("email", guest.guest.email || "", { shouldDirty: true });
+    form.setValue("passport", guest.guest.passport || "", { shouldDirty: true });
+    form.setValue("otas", guest.guest.otas || OTAS.BOOKING_COM, {
+      shouldDirty: true,
+    });
+    form.setValue("refId", guest.guest.refId || "", { shouldDirty: true });
+
+    form.setValue("roomPrice", guest.payment?.roomPrice?.toString() || "0", {
+      shouldDirty: true,
+    });
+    form.setValue(
+      "paidAmount",
+      guest.payment?.paidAmount?.toString() || "",
+      { shouldDirty: true },
+    );
+    form.setValue("sst", guest.payment?.sst?.toString() || "", {
+      shouldDirty: true,
+    });
+    form.setValue(
+      "tourismTax",
+      guest.payment?.tourismTax?.toString() || "",
+      { shouldDirty: true },
+    );
+    form.setValue("discount", guest.payment?.discount?.toString() || "", {
+      shouldDirty: true,
+    });
+    form.setValue(
+      "paymentMethod",
+      guest.payment?.paymentMethod || PAYMENT_METHOD.CASH,
+      { shouldDirty: true },
+    );
+    form.setValue("remarks", guest.payment?.remarks || "", {
+      shouldDirty: true,
+    });
+
+    toast.success(`Guest information loaded: ${guest.guest.name}`);
+  };
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-3xl p-0 overflow-auto max-h-148">
@@ -455,8 +500,27 @@ export function NewReservationDialog({
             >
               <div className="px-6 py-4 space-y-6">
                 {/* Step 1: Guest Information */}
-                {step === 1 && (
+                                {step === 1 && (
                   <div className="space-y-6">
+                    <PreviousGuestSearch
+                      value={form.watch("name") || ""}
+                      selectedGuest={selectedGuest}
+                      onSelectedGuestChange={setSelectedGuest}
+                      onValueChange={(value) =>
+                        form.setValue("name", value, { shouldDirty: true })
+                      }
+                      onGuestSelect={handleGuestSelection}
+                    />
+
+                    {selectedGuest && (
+                      <Badge variant="outline" className="gap-1">
+                        <User className="h-3 w-3" />
+                        Previous Guest
+                      </Badge>
+                    )}
+
+                    <Separator />
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -1240,3 +1304,6 @@ export function NewReservationDialog({
     </Dialog>
   );
 }
+
+
+

@@ -28,11 +28,10 @@ import {
   Users,
   DollarSign,
   MessageSquare,
-  Search,
   Loader2,
   PersonStanding,
 } from "lucide-react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import axios from "axios";
 import { Calendar as DatePicker } from "@/src/components/ui/calendar";
@@ -63,6 +62,7 @@ import {
 
 import { GetRoomIcon } from "@/src/shared/GetRoomIcon";
 import { PaymentInvoice } from "../../../shared/PaymentInvoice";
+import { PreviousGuestSearch } from "../guest/PreviousGuestSearch";
 import { IRoom } from "@/src/types/room.interface";
 import {
   DEPOSIT_METHOD,
@@ -131,9 +131,6 @@ export default function BookRoomDialog({
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [selectedGuest, setSelectedGuest] = useState<IBook | null>(null);
-  const [guestSearch, setGuestSearch] = useState("");
-  const [guestSearchInput, setGuestSearchInput] = useState("");
-  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const queryClient = useQueryClient();
 
   const isReserved = useMemo(() => {
@@ -153,27 +150,6 @@ export default function BookRoomDialog({
 
   const reserveGuest = isReserved[0];
 
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setGuestSearch(guestSearchInput);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [guestSearchInput]);
-
-  // Fetch guest suggestions
-  const { data: guestSuggestions = [], isLoading: isLoadingGuests } = useQuery<
-    IBook[]
-  >({
-    queryKey: ["guest-search", guestSearch],
-    queryFn: async () => {
-      if (!guestSearch || guestSearch.length < 2) return [];
-      const response = await axios.get(`/guests?search=${guestSearch}`);
-      return response.data.data?.guests || [];
-    },
-    enabled: guestSearch.length >= 2,
-  });
 
   // Form State
   const [formData, setFormData] = useState<FormData>({
@@ -210,8 +186,6 @@ export default function BookRoomDialog({
   // Handle guest selection
   const handleGuestSelection = useCallback((guest: IBook) => {
     setSelectedGuest(guest);
-    setShowGuestDropdown(false);
-    setGuestSearchInput(guest.guest.name);
 
     setFormData((prev) => ({
       ...prev,
@@ -397,8 +371,6 @@ export default function BookRoomDialog({
       },
     });
     setStep(1);
-    setGuestSearch("");
-    setGuestSearchInput("");
     setSelectedGuest(null);
   };
 
@@ -519,73 +491,13 @@ export default function BookRoomDialog({
           {/* Step 1: Guest Information */}
           {step === 1 && (
             <div className="space-y-6">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Search className="h-4 w-4" />
-                  Find Previous Guest
-                </Label>
-                <div className="relative">
-                  <Input
-                    value={guestSearchInput}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setGuestSearchInput(value);
-                      updateFormData("guest", { name: value });
-                      setShowGuestDropdown(value.length >= 2);
-                      if (selectedGuest && value !== selectedGuest.guest.name) {
-                        setSelectedGuest(null);
-                      }
-                    }}
-                    placeholder="Search by name, phone, or email..."
-                    className="pl-9"
-                  />
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-
-                  {showGuestDropdown && (
-                    <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-gray-900 border rounded-md shadow-lg max-h-60 overflow-y-auto">
-                      {isLoadingGuests ? (
-                        <div className="p-4 text-center">
-                          <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                        </div>
-                      ) : guestSuggestions.length > 0 ? (
-                        <div className="py-1">
-                          <div className="px-3 py-2 text-xs text-muted-foreground bg-muted border-b">
-                            Previous guests ({guestSuggestions.length})
-                          </div>
-                          {guestSuggestions.map((guest) => (
-                            <button
-                              key={guest._id}
-                              onClick={() => handleGuestSelection(guest)}
-                              className="w-full px-3 py-2 text-left hover:bg-muted transition-colors border-b last:border-b-0"
-                            >
-                              <div className="font-medium">
-                                {guest.guest.name}
-                              </div>
-                              <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                <Phone className="h-3 w-3" />{" "}
-                                {guest.guest.phone}
-                                {guest.guest.email && (
-                                  <>
-                                    <span>•</span>
-                                    <Mail className="h-3 w-3" />{" "}
-                                    {guest.guest.email}
-                                  </>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        guestSearchInput.length >= 2 && (
-                          <div className="p-4 text-center text-sm text-muted-foreground">
-                            No previous guests found
-                          </div>
-                        )
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <PreviousGuestSearch
+                value={formData.guest.name}
+                selectedGuest={selectedGuest}
+                onSelectedGuestChange={setSelectedGuest}
+                onValueChange={(value) => updateFormData("guest", { name: value })}
+                onGuestSelect={handleGuestSelection}
+              />
 
               <Separator />
 
@@ -1108,6 +1020,15 @@ export default function BookRoomDialog({
     </Dialog>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 
