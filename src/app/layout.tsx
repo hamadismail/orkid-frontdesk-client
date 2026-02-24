@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 const getUserRoleFromToken = async () => {
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
+    const token = cookieStore.get("accessToken")?.value;
 
     if (!token) return null;
 

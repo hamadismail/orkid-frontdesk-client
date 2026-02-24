@@ -31,22 +31,32 @@ export async function loginAction(
       };
     }
 
-    const token = data?.data?.accessToken;
+    const accessToken = data?.data?.accessToken;
+    const refreshToken = data?.data?.refreshToken;
 
-    if (!token) {
+    if (!accessToken || !refreshToken) {
       return {
         success: false,
-        message: "Authentication token was not returned",
+        message: "Authentication tokens were not returned",
       };
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("token", token, {
+
+    cookieStore.set("accessToken", accessToken, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24,
+    });
+
+    cookieStore.set("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
     });
 
     return {
@@ -69,7 +79,8 @@ export async function logoutAction(): Promise<AuthActionResult> {
     }).catch(() => null);
 
     const cookieStore = await cookies();
-    cookieStore.delete("token");
+    cookieStore.delete("accessToken");
+    cookieStore.delete("refreshToken");
 
     return {
       success: true,

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as jose from "jose";
 
 export async function proxy(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
+  const token = req.cookies.get("accessToken")?.value;
   const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
 
   const { pathname } = req.nextUrl;
@@ -20,10 +20,10 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/", req.url));
     }
     return NextResponse.next();
-  } catch  {
+  } catch {
     // Invalid token, redirect to login and delete the cookie
     const response = NextResponse.redirect(new URL("/login", req.url));
-    response.cookies.delete("token");
+    response.cookies.delete("accessToken");
     return response;
   }
 }
