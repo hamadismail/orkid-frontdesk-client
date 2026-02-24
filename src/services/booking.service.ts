@@ -4,6 +4,7 @@ export const getAllBookings = async () => {
   const res = await fetch(`${API_BASE_URL}/book`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {
@@ -36,6 +37,7 @@ export const getAllGuests = async (
   const res = await fetch(`${API_BASE_URL}/guests?${query}`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {

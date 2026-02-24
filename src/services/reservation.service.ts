@@ -4,6 +4,7 @@ export const getAllReservations = async () => {
   const res = await fetch(`${API_BASE_URL}/reserve`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {

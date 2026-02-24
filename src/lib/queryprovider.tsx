@@ -5,8 +5,8 @@ import { ReactNode, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "./config";
 
-// Configure axios globally
 axios.defaults.baseURL = API_BASE_URL;
+axios.defaults.withCredentials = true;
 
 export default function QueryProvider({ children }: { children: ReactNode }) {
   const [client] = useState(() => new QueryClient());

@@ -15,6 +15,7 @@ export const getDashboardData = async (query: {
   const res = await fetch(`${API_BASE_URL}/dashboard?${params.toString()}`, {
     method: "GET",
     cache: "no-store",
+    credentials: "include",
   });
 
   if (!res.ok) {

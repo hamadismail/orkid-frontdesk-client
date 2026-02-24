@@ -4,6 +4,7 @@ export const getAllRooms = async () => {
   const res = await fetch(`${API_BASE_URL}/rooms`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {

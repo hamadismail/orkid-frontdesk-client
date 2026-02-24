@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies, headers } from "next/headers";
+import { decodeJwt } from "jose";
 import "@/src/globals.css";
 import QueryProvider from "@/src/lib/queryprovider";
 import { SidebarInset, SidebarProvider } from "../components/ui/sidebar";
@@ -7,7 +9,6 @@ import { AppSidebar } from "../shared/AppSidebar";
 import { SiteHeader } from "../shared/SiteHeader";
 import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider } from "../lib/theme-provider";
-import { headers } from "next/headers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,6 +23,20 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Orkid Hills Hotel",
   description: "Hotel reservation",
+};
+
+const getUserRoleFromToken = async () => {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+
+    if (!token) return null;
+
+    const payload = decodeJwt(token) as { role?: string };
+    return payload.role || null;
+  } catch {
+    return null;
+  }
 };
 
 export default async function RootLayout({
@@ -52,6 +67,8 @@ export default async function RootLayout({
     );
   }
 
+  const userRole = await getUserRoleFromToken();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -71,12 +88,11 @@ export default async function RootLayout({
               } as React.CSSProperties
             }
           >
-            <AppSidebar />
+            <AppSidebar userRole={userRole} />
             <SidebarInset>
               <SiteHeader />
               <main className="relative">
                 <QueryProvider>{children}</QueryProvider>
-                {/* <RouteLoader /> */}
                 <Toaster position="top-center" richColors />
               </main>
             </SidebarInset>

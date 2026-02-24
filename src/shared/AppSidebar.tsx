@@ -37,9 +37,19 @@ import {
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
 import { ModeToggle } from "./ModeToggler";
+import { logoutAction } from "@/src/app/actions/auth";
 
-// Move static data outside component to prevent recreation on every render
-const navLinks = [
+type AppSidebarProps = {
+  userRole?: string | null;
+};
+
+type NavLink = {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+};
+
+const navLinks: NavLink[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
@@ -81,7 +91,7 @@ const secondaryLinks = [
   },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ userRole }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -89,11 +99,14 @@ export function AppSidebar() {
     [key: string]: boolean;
   }>({});
 
-  // Handle route changes with loading states
+  const visibleNavLinks = useMemo(
+    () => navLinks.filter((link) => link.href !== "/dashboard" || userRole === "ADMIN"),
+    [userRole],
+  );
+
   const handleNavigation = useCallback((href: string) => {
     setNavigationState((prev) => ({ ...prev, [href]: true }));
 
-    // Simulate a minimum loading time for better UX
     setTimeout(() => {
       setNavigationState((prev) => ({ ...prev, [href]: false }));
     }, 300);
@@ -102,15 +115,13 @@ export function AppSidebar() {
   const handleLogout = useCallback(async () => {
     setIsLoggingOut(true);
     try {
-      const response = await fetch("/api/auth/logout", {
-        method: "POST",
-      });
+      const result = await logoutAction();
 
-      if (response.ok) {
-        toast.success("Logged out successfully");
+      if (result.success) {
+        toast.success(result.message);
         router.push("/login");
       } else {
-        toast.error("Failed to logout");
+        toast.error(result.message);
       }
     } catch {
       toast.error("An error occurred during logout.");
@@ -119,19 +130,18 @@ export function AppSidebar() {
     }
   }, [router]);
 
-  // Memoize navigation links to prevent unnecessary re-renders
   const renderNavLinks = useMemo(
     () =>
-      navLinks.map((link) => (
+      visibleNavLinks.map((link) => (
         <Link
           key={link.href}
           href={link.href}
           onClick={() => handleNavigation(link.href)}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
+            "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
             pathname === link.href
               ? "bg-primary/10 text-primary"
-              : "hover:bg-accent hover:text-accent-foreground"
+              : "hover:bg-accent hover:text-accent-foreground",
           )}
         >
           <span className="text-muted-foreground">{link.icon}</span>
@@ -144,7 +154,7 @@ export function AppSidebar() {
           )}
         </Link>
       )),
-    [pathname, navigationState, handleNavigation]
+    [pathname, navigationState, handleNavigation, visibleNavLinks],
   );
 
   const renderSecondaryLinks = useMemo(
@@ -155,10 +165,10 @@ export function AppSidebar() {
           href={link.href}
           onClick={() => handleNavigation(link.href)}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
+            "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
             pathname === link.href
               ? "bg-primary/10 text-primary"
-              : "hover:bg-accent hover:text-accent-foreground"
+              : "hover:bg-accent hover:text-accent-foreground",
           )}
         >
           <span className="text-muted-foreground">{link.icon}</span>
@@ -168,15 +178,15 @@ export function AppSidebar() {
           )}
         </Link>
       )),
-    [pathname, navigationState, handleNavigation]
+    [pathname, navigationState, handleNavigation],
   );
 
   return (
     <Sidebar className="border-r bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-      <SidebarHeader className="p-4 border-b">
+      <SidebarHeader className="border-b p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="bg-primary rounded-lg p-2">
+            <div className="rounded-lg bg-primary p-2">
               <Hotel className="h-6 w-6 text-muted" />
             </div>
             <div>
@@ -194,14 +204,14 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup className="mt-8">
-          <h3 className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <h3 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Management
           </h3>
           <div className="space-y-1">{renderSecondaryLinks}</div>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter className="border-t p-4">
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button

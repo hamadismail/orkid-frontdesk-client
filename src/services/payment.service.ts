@@ -10,6 +10,7 @@ export const getAllPayments = async (page: number, search: string, filter: strin
   const res = await fetch(`${API_BASE_URL}/payments?${query}`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {
@@ -36,6 +37,7 @@ export const getSalesReportPayment = async (
   const res = await fetch(`${API_BASE_URL}/payments/sales-report?${query}`, {
     method: 'GET',
     cache: 'no-store',
+    credentials: 'include',
   });
 
   if (!res.ok) {

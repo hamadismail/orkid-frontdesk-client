@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-// import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import {
   Card,
@@ -15,41 +14,35 @@ import { Label } from "@/src/components/ui/label";
 import { toast } from "sonner";
 import Image from "next/image";
 import { Loader2 } from "lucide-react";
+import { loginAction } from "@/src/app/actions/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const result = await loginAction(email, password);
 
-      const data = await response.json().catch(() => null);
-
-      if (response.ok) {
-        toast.success("Logged in successfully");
+      if (result.success) {
+        toast.success(result.message);
         window.location.href = "/";
       } else {
-        toast.error(data?.message || "Invalid credentials");
+        toast.error(result.message);
       }
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error("Unable to complete login. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <Image
@@ -58,9 +51,11 @@ export default function LoginPage() {
             width={150}
             height={150}
             priority
-            className="mx-auto w-auto h-auto"
+            className="mx-auto h-auto w-auto"
           />
-          <CardTitle className="text-2xl font-bold sr-only">Orkid Hills Hotel</CardTitle>
+          <CardTitle className="sr-only text-2xl font-bold">
+            Orkid Hills Hotel
+          </CardTitle>
           <CardDescription>Frontdesk Login</CardDescription>
         </CardHeader>
         <CardContent>
