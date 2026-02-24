@@ -226,70 +226,65 @@ export function GuestDetailsDialog({
           {/* Right Column - Payment & Remarks */}
           <div className="space-y-6">
             {/* Payment Information */}
-            {payment && "roomPrice" in payment && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  Payment Details
-                </h3>
-                <div className="space-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-2">
-                  <PaymentRow label="Room Price" amount={payment.roomPrice} />
-                  {/* <PaymentRow label="SST" amount={payment.sst} />
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Payment Details
+              </h3>
+              <div className="space-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-2">
+                <PaymentRow label="Room Price" amount={payment.roomPrice} />
+                {/* <PaymentRow label="SST" amount={payment.sst} />
                   <PaymentRow label="Tourism Tax" amount={payment.tourismTax} /> */}
-                  <Separator />
+                <Separator />
+                <PaymentRow
+                  label="Discount"
+                  amount={payment.discount}
+                  className="text-destructive"
+                />
+                <PaymentRow
+                  label="Subtotal"
+                  amount={payment.subtotal}
+                  isTotal
+                />
+                <Separator />
+                <PaymentRow
+                  label="Paid Amount"
+                  amount={payment.paidAmount}
+                  className="text-green-600"
+                />
+                <PaymentRow
+                  label="Due Amount"
+                  amount={payment.dueAmount}
+                  className="text-red-600 font-bold"
+                />
+                {payment && "deposit" in payment && (
                   <PaymentRow
-                    label="Discount"
-                    amount={payment.discount}
-                    className="text-destructive"
+                    label="Deposit"
+                    amount={payment.deposit || 0}
+                    className="text-blue-600"
                   />
-                  <PaymentRow
-                    label="Subtotal"
-                    amount={payment.subtotal}
-                    isTotal
-                  />
-                  <Separator />
-                  <PaymentRow
-                    label="Paid Amount"
-                    amount={payment.paidAmount}
-                    className="text-green-600"
-                  />
-                  <PaymentRow
-                    label="Due Amount"
-                    amount={payment.dueAmount}
-                    className="text-red-600 font-bold"
-                  />
-                  {payment &&
-                    "deposit" in payment &&
-                    payment.deposit && (
-                      <PaymentRow
-                        label="Deposit"
-                        amount={payment.deposit || 0}
-                        className="text-blue-600"
-                      />
-                    )}
-                  <Separator />
-                  <PaymentRow
-                    label="Payment Method"
-                    value={payment.paymentMethod}
-                  />
-                </div>
+                )}
+                <Separator />
+                <PaymentRow
+                  label="Payment Method"
+                  value={payment.paymentMethod}
+                />
               </div>
-            )}
+            </div>
 
             {/* Remarks */}
-            {payment && "remarks" in payment && payment.remarks && (
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  Remarks
-                </h3>
-                <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground">
-                  <p className="leading-relaxed">
-                    {payment.remarks || "No remarks provided."}
-                  </p>
-                </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Remarks
+              </h3>
+              <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground">
+                <p className="leading-relaxed">
+                  {payment.remarks || "No remarks provided."}
+                </p>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
