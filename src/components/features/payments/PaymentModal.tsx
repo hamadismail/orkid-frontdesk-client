@@ -61,7 +61,10 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
     return !errors.paidAmount;
   };
 
-  const { mutate: updateGuest, isPending } = useMutation<UpdatePaymentResponse, AxiosError>({
+  const { mutate: updateGuest, isPending } = useMutation<
+    UpdatePaymentResponse,
+    AxiosError
+  >({
     mutationFn: async () => {
       if (!validateForm()) {
         throw new Error("Please fix form errors");
@@ -79,13 +82,6 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
       return data?.data;
     },
     onSuccess: async (result) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["payments"] }),
-        queryClient.invalidateQueries({ queryKey: ["book"] }),
-        queryClient.invalidateQueries({ queryKey: ["rooms"] }),
-        queryClient.invalidateQueries({ queryKey: ["single-guest", guest?._id] }),
-      ]);
-
       if (!result?.receiptData) {
         toast.error("Payment saved but receipt data is missing");
         return;
@@ -115,6 +111,17 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
     });
     setFormErrors({ paidAmount: "" });
     setReceiptData(null);
+  };
+
+  const handleAfterPrint = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["payments"] }),
+      queryClient.invalidateQueries({ queryKey: ["book"] }),
+      queryClient.invalidateQueries({ queryKey: ["rooms"] }),
+      queryClient.invalidateQueries({ queryKey: ["single-guest", guest?._id] }),
+    ]);
+
+    setOpen(false);
   };
 
   const totalDue = singleGuest?.payment?.dueAmount || 0;
@@ -151,6 +158,7 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
               bookingInfo={receiptData}
               isBooking={isPending}
               printOnly
+              onAfterPrint={handleAfterPrint}
             />
           </div>
         ) : (
@@ -292,4 +300,3 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
     </Dialog>
   );
 }
-

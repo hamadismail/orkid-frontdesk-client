@@ -647,6 +647,9 @@ export default function StayOver({
                     return result?.receiptData;
                   }}
                   isBooking={isPending}
+                  onAfterPrint={async () => {
+                    handleClose();
+                  }}
                 />
               </div>
             )}
@@ -699,3 +702,6 @@ export default function StayOver({
     </Dialog>
   );
 }
+
+
+
