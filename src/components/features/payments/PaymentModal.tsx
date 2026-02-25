@@ -18,12 +18,20 @@ import axios, { AxiosError } from "axios";
 import { Label } from "@/src/components/ui/label";
 import { PaymentInvoice } from "../../../shared/PaymentInvoice";
 import { IBook, PAYMENT_METHOD } from "@/src/types/book.interface";
-import { IRoom } from "@/src/types/room.interface";
+import { TPaymentReceiptInfo } from "@/src/types/payment.interface";
+
+type UpdatePaymentResponse = {
+  guest: IBook;
+  receiptData: TPaymentReceiptInfo;
+};
 
 export default function PaymentModal({ guest }: { guest: IBook }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<TPaymentReceiptInfo | null>(
+    null,
+  );
   const [formErrors, setFormErrors] = useState({ paidAmount: "" });
 
   const { data: singleGuest } = useQuery<IBook>({
@@ -32,6 +40,7 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
       const { data } = await axios.get(`/stayover/${guest._id}`);
       return data.data;
     },
+    enabled: !!guest?._id && open,
   });
 
   const [paymentInfo, setPaymentInfo] = useState({
@@ -52,7 +61,7 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
     return !errors.paidAmount;
   };
 
-  const { mutate: updateGuest, isPending } = useMutation({
+  const { mutate: updateGuest, isPending } = useMutation<UpdatePaymentResponse, AxiosError>({
     mutationFn: async () => {
       if (!validateForm()) {
         throw new Error("Please fix form errors");
@@ -64,14 +73,27 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
           remarks: paymentInfo.remarks,
         },
       };
-      const { data } = await axios.patch(`/payments/${guest._id}`, payload);
-      return data;
+      const { data } = await axios.patch(`/payments/${guest._id}`, payload, {
+        timeout: 20000,
+      });
+      return data?.data;
     },
-    onSuccess: () => {
-      toast.success("Payment successful!");
-      queryClient.invalidateQueries({ queryKey: ["payments"] });
-      // resetForm();
+    onSuccess: async (result) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["payments"] }),
+        queryClient.invalidateQueries({ queryKey: ["book"] }),
+        queryClient.invalidateQueries({ queryKey: ["rooms"] }),
+        queryClient.invalidateQueries({ queryKey: ["single-guest", guest?._id] }),
+      ]);
+
+      if (!result?.receiptData) {
+        toast.error("Payment saved but receipt data is missing");
+        return;
+      }
+
+      setReceiptData(result.receiptData);
       setShowReceipt(true);
+      toast.success("Payment successful!");
     },
     onError: (error: AxiosError) => {
       const errorData = error.response?.data as {
@@ -92,12 +114,12 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
       paymentMethod: PAYMENT_METHOD.CASH,
     });
     setFormErrors({ paidAmount: "" });
+    setReceiptData(null);
   };
 
   const totalDue = singleGuest?.payment?.dueAmount || 0;
   const paymentAmount = Number(paymentInfo.paidAmount) || 0;
   const currentDue = totalDue - paymentAmount;
-  const room = singleGuest?.roomId as IRoom; // Re-added declaration
 
   return (
     <Dialog
@@ -123,40 +145,10 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
       </DialogTrigger>
 
       <DialogContent className="sm:max-w-150">
-        {showReceipt ? (
+        {showReceipt && receiptData ? (
           <div className="grid gap-6 overflow-scroll max-h-80">
             <PaymentInvoice
-              bookingInfo={{
-                guest: {
-                  name: singleGuest?.guest.name || "",
-                  phone: singleGuest?.guest.phone || "",
-                },
-                stay: {
-                  arrival: singleGuest?.stay.arrival
-                    ? new Date(singleGuest.stay.arrival)
-                    : new Date(),
-                  departure: singleGuest?.stay.departure
-                    ? new Date(singleGuest.stay.departure)
-                    : new Date(),
-                },
-                room: {
-                  number: room?.roomNo || "",
-                  type: room?.roomType || "",
-                },
-                payment: {
-                  paidAmount: parseFloat(paymentInfo.paidAmount) || 0,
-                  deposit: singleGuest?.payment.deposit || 0,
-                  method: paymentInfo.paymentMethod || "Cash",
-                  remarks: paymentInfo.remarks || "N/A",
-                },
-                paymentId: `PAY-${Date.now()
-                  .toString(36)
-                  .toUpperCase()}-${Math.random()
-                  .toString(36)
-                  .substring(2, 10)
-                  .toUpperCase()}`,
-                paymentDate: new Date(),
-              }}
+              bookingInfo={receiptData}
               isBooking={isPending}
               printOnly
             />
@@ -205,7 +197,6 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
                 )}
               </div>
 
-              {/* Remarks */}
               <div className="space-y-2">
                 <Label>Remarks</Label>
                 <Input
@@ -221,7 +212,6 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
                 />
               </div>
 
-              {/* Payment Method */}
               <div className="space-y-2 col-span-2">
                 <Label>Payment Method</Label>
                 <div className="flex gap-4">
@@ -302,3 +292,4 @@ export default function PaymentModal({ guest }: { guest: IBook }) {
     </Dialog>
   );
 }
+

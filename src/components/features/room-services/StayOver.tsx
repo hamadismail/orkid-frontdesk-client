@@ -31,7 +31,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 import { Calendar as DatePicker } from "@/src/components/ui/calendar";
-import { format, addDays, differenceInDays } from "date-fns";
+import {
+  format,
+  addDays,
+  differenceInCalendarDays,
+  startOfDay,
+} from "date-fns";
 import {
   Popover,
   PopoverContent,
@@ -52,6 +57,7 @@ import { RadioGroup, RadioGroupItem } from "@/src/components/ui/radio-group";
 import { PaymentInvoice } from "../../../shared/PaymentInvoice";
 import { IRoom } from "@/src/types/room.interface";
 import { IBook, PAYMENT_METHOD } from "@/src/types/book.interface";
+import { TPaymentReceiptInfo } from "@/src/types/payment.interface";
 
 type StayOverProps = {
   room: IRoom;
@@ -111,7 +117,10 @@ export default function StayOver({
 
   const additionalNights = useMemo(() => {
     if (!stayInfo.arrival || !stayInfo.departure) return 0;
-    return differenceInDays(stayInfo.departure, stayInfo.arrival);
+    return differenceInCalendarDays(
+      startOfDay(stayInfo.departure),
+      startOfDay(stayInfo.arrival),
+    );
   }, [stayInfo.arrival, stayInfo.departure]);
 
   const previousDue = singleGuest?.payment?.dueAmount || 0;
@@ -127,7 +136,7 @@ export default function StayOver({
   useEffect(() => {
     if (singleGuest) {
       if (singleGuest.stay?.departure) {
-        const departureDate = new Date(singleGuest.stay.departure);
+        const departureDate = startOfDay(new Date(singleGuest.stay.departure));
         setStayInfo({
           arrival: departureDate,
           departure: addDays(departureDate, 1),
@@ -143,7 +152,15 @@ export default function StayOver({
   }, [singleGuest]);
 
   // Mutation
-  const { mutate: updateGuest, isPending } = useMutation({
+  type UpdateStayoverResponse = {
+    guest: IBook;
+    receiptData: TPaymentReceiptInfo;
+  };
+
+  const { mutateAsync: updateGuest, isPending } = useMutation<
+    UpdateStayoverResponse,
+    AxiosError
+  >({
     mutationFn: async () => {
       if (!room?.guestId) throw new Error("Guest ID is missing");
       if (!stayInfo.departure) throw new Error("Check-out date is required");
@@ -162,11 +179,8 @@ export default function StayOver({
         },
       };
 
-      const { data } = await axios.patch(
-        `/stayover/${room.guestId}`,
-        payload,
-      );
-      return data;
+      const { data } = await axios.patch(`/stayover/${room.guestId}`, payload);
+      return data?.data;
     },
     onSuccess: async () => {
       await Promise.all([
@@ -181,8 +195,6 @@ export default function StayOver({
         description: `Room ${room.roomNo} extended to ${format(stayInfo.departure!, "MMM d, yyyy")}`,
         icon: <Check className="h-5 w-5 text-green-500" />,
       });
-
-      handleClose();
     },
     onError: (error: AxiosError) => {
       const errorData = error.response?.data as { message?: string };
@@ -630,7 +642,10 @@ export default function StayOver({
                     paymentDate: new Date(),
                     paymentId: `EXT-${Date.now().toString(36).toUpperCase()}`,
                   }}
-                  onConfirmBooking={updateGuest}
+                  onConfirmBooking={async () => {
+                    const result = await updateGuest();
+                    return result?.receiptData;
+                  }}
                   isBooking={isPending}
                 />
               </div>
@@ -669,22 +684,8 @@ export default function StayOver({
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               ) : (
-                <Button
-                  onClick={() => updateGuest()}
-                  disabled={isPending || !stayInfo.departure}
-                  className="gap-2"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Confirm Extension
-                    </>
-                  )}
+                <Button disabled className="gap-2" variant="secondary">
+                  Confirm in invoice
                 </Button>
               )}
             </div>

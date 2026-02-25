@@ -28,7 +28,6 @@ import {
   Users,
   DollarSign,
   MessageSquare,
-  Loader2,
   PersonStanding,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -72,6 +71,7 @@ import {
   PAYMENT_METHOD,
 } from "@/src/types/book.interface";
 import { IReservation } from "@/src/types/reservation.interface";
+import { TPaymentReceiptInfo } from "@/src/types/payment.interface";
 
 type BookRoomDialogProps = {
   room: IRoom;
@@ -282,7 +282,12 @@ export default function BookRoomDialog({
   }, [calculateTotal, formData.payment.paidAmount, reserveGuest]);
 
   // Mutation
-  const { mutate: bookRoom, isPending } = useMutation({
+  type CreateBookingResponse = {
+    booking: IBook;
+    receiptData: TPaymentReceiptInfo;
+  };
+
+  const { mutateAsync: bookRoom, isPending } = useMutation<CreateBookingResponse>({
     mutationFn: async () => {
       const res = await axios.post("/book", {
         bookingInfo: {
@@ -299,26 +304,19 @@ export default function BookRoomDialog({
             2,
           ),
         },
-      });
-      return res.data;
-    },
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["rooms"] }),
-        queryClient.invalidateQueries({ queryKey: ["book"] }),
-      ]);
-
-      toast.success("Room booked successfully!", {
-        description: `Room ${room.roomNo} assigned to ${formData.guest.name}`,
-      });
-
-      handleClose();
+      }, { timeout: 20000 });
+      return res.data?.data;
     },
     onError: (error: unknown) => {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 409) {
           toast.error("Booking conflict", {
             description: error.response.data?.message || "Room not available",
+          });
+        } else if (error.code === "ECONNABORTED") {
+          toast.error("Request timeout", {
+            description:
+              "Check-in is taking too long. Please retry and verify if the room status changed.",
           });
         } else {
           toast.error("Booking failed", {
@@ -958,7 +956,20 @@ export default function BookRoomDialog({
                   paymentDate: new Date(),
                   paymentId: `PAY-${Date.now().toString(36).toUpperCase()}`,
                 }}
-                onConfirmBooking={bookRoom}
+                onConfirmBooking={async () => {
+                  const result = await bookRoom();
+                  return result?.receiptData;
+                }}
+                onAfterPrint={async () => {
+                  await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: ["rooms"] }),
+                    queryClient.invalidateQueries({ queryKey: ["book"] }),
+                    queryClient.invalidateQueries({ queryKey: ["reserve"] }),
+                  ]);
+
+                  toast.success("Room booked successfully!");
+                  handleClose();
+                }}
                 isBooking={isPending}
               />
             </div>
@@ -992,25 +1003,7 @@ export default function BookRoomDialog({
                     <ArrowRight className="h-4 w-4" />
                   </Button>
                 </>
-              ) : (
-                <Button
-                  onClick={() => bookRoom()}
-                  disabled={isPending}
-                  className="gap-2"
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Confirm Booking
-                    </>
-                  )}
-                </Button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -1020,6 +1013,24 @@ export default function BookRoomDialog({
     </Dialog>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

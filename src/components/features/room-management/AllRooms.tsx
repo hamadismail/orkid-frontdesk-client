@@ -23,7 +23,7 @@ function AllRooms() {
     setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-    }, 1000); // Update every second for a "live" feel
+    }, 60000); // Update once per minute to avoid heavy rerenders
     return () => clearInterval(timer);
   }, []);
 
@@ -290,7 +290,6 @@ function AllRooms() {
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: true,
-                  second: "2-digit",
                 }) || "..."}
               </span>
             </div>
@@ -373,3 +372,4 @@ function AllRooms() {
 }
 
 export default AllRooms;
+

@@ -17,33 +17,40 @@ export interface IPayment {
   updatedAt?: Date;
 }
 
-export interface IPaymentReceiptProps {
-  bookingInfo: {
-    guest: {
-      name: string | undefined;
-      phone: string | undefined;
-      otas?: string | undefined;
-      refId?: string | undefined;
-    };
-    stay: {
-      arrival: Date | undefined;
-      departure: Date | undefined;
-    };
-    room: {
-      number: string | undefined;
-      type: string | undefined;
-    };
-    payment: {
-      paidAmount: number;
-      deposit: number;
-      depositMethod?: string | undefined;
-      method: string | undefined;
-      remarks?: string | undefined;
-    };
-    paymentDate: Date;
-    paymentId: string | undefined;
+export type TPaymentReceiptInfo = {
+  guest: {
+    name: string | undefined;
+    phone: string | undefined;
+    otas?: string | undefined;
+    refId?: string | undefined;
   };
-  onConfirmBooking?: () => Promise<void> | void;
+  stay: {
+    arrival: Date | string | undefined;
+    departure: Date | string | undefined;
+  };
+  room: {
+    number: string | undefined;
+    type: string | undefined;
+  };
+  payment: {
+    paidAmount: number;
+    deposit: number;
+    depositMethod?: string | undefined;
+    method: string | undefined;
+    remarks?: string | undefined;
+  };
+  paymentDate: Date | string;
+  paymentId: string | undefined;
+};
+
+export interface IPaymentReceiptProps {
+  bookingInfo: TPaymentReceiptInfo;
+  onConfirmBooking?: () =>
+    | Promise<TPaymentReceiptInfo | void>
+    | TPaymentReceiptInfo
+    | void;
   isBooking: boolean;
   printOnly?: boolean;
+  onAfterPrint?: () => Promise<void> | void;
 }
+
