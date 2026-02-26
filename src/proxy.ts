@@ -3,7 +3,7 @@ import * as jose from "jose";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://orkidfrontdesk-server.vercel.app/api/v1";
+  "https://ecofrontdesk-server.vercel.app/api/v1";
 
 const ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "";

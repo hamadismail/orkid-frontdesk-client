@@ -88,7 +88,7 @@ export function DailySalesReport({
         <header className="flex justify-between items-center pb-3 border-b mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              Orkid Hills Hotel
+              Eco Hotel
             </h1>
             <p className="text-sm text-gray-600">Daily Sales Report</p>
           </div>

@@ -95,20 +95,12 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
         {/* Invoice Header */}
         <div className="p-8 border-b border-gray-200">
           <div className="flex justify-between items-start">
-            {/* Company Info with Logo */}
-            {/* <Image
-              src="/img/ecoHotel.png"
-              alt="Orkid Hills Hotel Logo"
-              width={500}
-              height={200}
-              className="mx-auto w-1/2"
-            /> */}
             <div>
               <div className="mb-4">
                 {/* Replace with your actual logo */}
                 <div className="w-48 h-12 bg-linear-to-r from-green-600 to-emerald-700 rounded flex items-center justify-center mb-2">
                   <span className="text-white font-bold text-xl">
-                    ORKID HILLS
+                    ECO HOTEL
                   </span>
                 </div>
                 <p className="text-emerald-700 font-medium">
@@ -116,11 +108,10 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 </p>
               </div>
               <div className="text-sm text-gray-600">
-                <p>300, Jalan Pudu</p>
-                <p>Pudu, 55100, Kuala Lumpur</p>
-                <p>Malaysia</p>
-                <p className="mt-1">Phone: +60 173004099, +60 178988418</p>
-                <p>Email: orkidhills@gmail.com</p>
+                <p>179, Jalan Pudu</p>
+                <p>Pudu-55100 Kuala Lumpur, Malaysia</p>
+                <p className="mt-1">Phone: +60 1116962002, +60 178988418</p>
+                <p>Email: ecohotel.bb@gmail.com</p>
               </div>
             </div>
 
@@ -339,42 +330,6 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
             </div>
           </div>
         </div>
-
-        {/* Footer */}
-        {/* <div className="p-8 bg-gray-50 border-t border-gray-200">
-          <div className="grid grid-cols-2 gap-8">
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">
-                Payment Instructions
-              </h3>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>• Bank Transfer: Maybank 5140-1234-5678</p>
-                <p>• Payable to: Orkid Hills Hotel Sdn Bhd</p>
-                <p>• Please include invoice number with payment</p>
-                <p>• Payment due within 14 days</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-700 mb-2">
-                Contact Information
-              </h3>
-              <div className="text-sm text-gray-600">
-                <p>📞 +60 3-1234 5678</p>
-                <p>📧 accounting@ecohotel.com</p>
-                <p>🌐 www.ecohotel.com</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-300 text-center">
-            <p className="text-emerald-700 font-semibold mb-2">
-              Thank you for choosing Orkid Hills Hotel!
-            </p>
-            <p className="text-sm text-gray-600">
-              This is a computer-generated invoice. No signature required.
-            </p>
-          </div>
-        </div> */}
       </div>
     );
   },
