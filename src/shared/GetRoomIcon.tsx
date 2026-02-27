@@ -15,6 +15,10 @@ export const GetRoomIcon = (type: RoomType) => {
       return <Hotel className="h-5 w-5" />;
     case RoomType.DTWIN:
       return <BedSingle className="h-5 w-5" />;
+    case RoomType.SSINGLE:
+      return <BedSingle className="h-5 w-5" />;
+    case RoomType.STWIN:
+      return <BedDouble className="h-5 w-5" />;
     default:
       return <BedSingle className="h-5 w-5" />;
   }

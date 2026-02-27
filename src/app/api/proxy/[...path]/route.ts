@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://ecofrontdesk-server.vercel.app/api/v1";
+  process.env.NEXT_PUBLIC_API_URL || "https://putrafrontdesk-server.vercel.app/api/v1";
 
 const toProxyResponse = async (response: Response) => {
   const responseBody = await response.text();

@@ -190,7 +190,7 @@ export function AppSidebar({ userRole }: AppSidebarProps) {
               <Hotel className="h-6 w-6 text-muted" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-primary">Eco Hotel</h1>
+              <h1 className="text-lg font-bold text-primary">Putra Hills</h1>
               <p className="text-xs text-muted-foreground">Frontdesk</p>
             </div>
           </div>

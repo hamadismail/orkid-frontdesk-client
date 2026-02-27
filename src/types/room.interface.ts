@@ -1,12 +1,14 @@
 import { Types } from "mongoose";
 
 export enum RoomType {
+  SSINGLE = "Standard Single Room",
+  STWIN = "Standard Twin Room",
   SQUEEN = "Standard Queen Room",
   DTWIN = "Delux Twin Room",
+  DTRIPPLE = "Delux Triple Room",
   DQUEEN = "Delux Queen Room",
-  DTRIPPLE = "Deluxe Triple Room",
+  DFAMILLY = "Delux Family Room",
   SFAMILLY = "Superior Family Room",
-  DFAMILLY = "Deluxe Family Room",
 }
 
 export enum RoomStatus {

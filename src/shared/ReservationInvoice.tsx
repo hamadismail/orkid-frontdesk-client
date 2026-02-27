@@ -82,17 +82,17 @@ export default function ReservationInvoice({
       <Card ref={contentRef} className="border-none shadow-none">
         <CardHeader className="text-center">
           <Image
-            src="/img/ecoHotel.png"
-            alt="Eco Hotel Logo"
+            src="/img/logoPutra.png"
+            alt="Putra Hills Hotel Logo"
             width={500}
             height={200}
             className="mx-auto w-1/2"
           />
           <Separator className="my-2 w-3/4 mx-auto" />
           <div className="text-xs text-muted-foreground">
-            <p>179, Jalan Pudu, Pudu-55100 Kuala Lumpur, Malaysia</p>
-            <p>Hotline: +601116962002, 0178988418</p>
-            <p>Email: ecohotel.bb@gmail.com</p>
+            <p>50 & 52, Jalan Putra, Chow Kit, Wilayah Persekutuan, Malaysia</p>
+            <p>Hotline: +6017-991 0600</p>
+            {/* <p>Email: ecohotel.bb@gmail.com</p> */}
           </div>
         </CardHeader>
 

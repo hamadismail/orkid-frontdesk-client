@@ -3,10 +3,9 @@ import * as jose from "jose";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://ecofrontdesk-server.vercel.app/api/v1";
+  "https://putrafrontdesk-server.vercel.app/api/v1";
 
-const ACCESS_SECRET =
-  process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "";
+const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "";
 
 const refreshAccessToken = async (refreshToken: string) => {
   try {
@@ -14,7 +13,10 @@ const refreshAccessToken = async (refreshToken: string) => {
       `${API_BASE_URL.replace(/\/$/, "")}/auth/refresh-token`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ refreshToken }),
         cache: "no-store",
       },

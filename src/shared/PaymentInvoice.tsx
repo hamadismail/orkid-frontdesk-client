@@ -116,16 +116,16 @@ export function PaymentInvoice({
     <div className="border border-gray-300 p-3 mb-6 font-mono">
       <div className="flex items-center justify-between mb-1 pb-1 border-b border-gray-200">
         <div>
-          <h2 className="text-xl font-bold text-gray-800">Eco Hotel</h2>
+          <h2 className="text-xl font-bold text-gray-800"> Putra Hills Hotel</h2>
           <p className="text-xs text-gray-500">
-            179, Jalan Pudu, Pudu-55100 Kuala Lumpur, Malaysia
+            50 & 52, Jalan Putra, Chow Kit, Wilayah Persekutuan, Malaysia
           </p>
           <p className="text-xs text-gray-500">
-            <strong>Hotline:</strong> +601116962002, 0178988418
+            <strong>Hotline:</strong> +6017-991 0600
           </p>
-          <p className="text-xs text-gray-500">
+          {/* <p className="text-xs text-gray-500">
             <strong>E-mail:</strong> ecohotel.bb@gmail.com
-          </p>
+          </p> */}
         </div>
         <div className="text-right">
           <h3 className="text-xl font-semibold text-gray-700">

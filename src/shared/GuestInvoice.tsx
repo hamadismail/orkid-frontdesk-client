@@ -100,7 +100,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 {/* Replace with your actual logo */}
                 <div className="w-48 h-12 bg-linear-to-r from-green-600 to-emerald-700 rounded flex items-center justify-center mb-2">
                   <span className="text-white font-bold text-xl">
-                    ECO HOTEL
+                     PUTRA HILLS
                   </span>
                 </div>
                 <p className="text-emerald-700 font-medium">
@@ -108,10 +108,10 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                 </p>
               </div>
               <div className="text-sm text-gray-600">
-                <p>179, Jalan Pudu</p>
-                <p>Pudu-55100 Kuala Lumpur, Malaysia</p>
-                <p className="mt-1">Phone: +60 1116962002, +60 178988418</p>
-                <p>Email: ecohotel.bb@gmail.com</p>
+                <p>50 & 52, Jalan Putra</p>
+                <p>Chow Kit, Wilayah Persekutuan, Malaysia</p>
+                <p className="mt-1">Phone: +6017-991 0600</p>
+                {/* <p>Email: ecohotel.bb@gmail.com</p> */}
               </div>
             </div>
 

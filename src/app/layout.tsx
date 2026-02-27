@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Eco Hotel",
+  title: "Putra Hills Hotel",
   description: "Hotel reservation",
 };
 

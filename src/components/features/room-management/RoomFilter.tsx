@@ -12,6 +12,8 @@ import {
   Brush,
   Hotel,
   ChevronDown,
+  BedDouble,
+  Crown,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
@@ -85,12 +87,15 @@ const ROOM_TYPE_ICONS: Record<
   string,
   React.ComponentType<{ className?: string }>
 > = {
-  SQUEEN: Hotel,
-  DQUEEN: Hotel,
-  DTWIN: Bed,
+  SQUEEN: Crown,
+  DQUEEN: Crown,
+  DTWIN: BedDouble,
   DTRIPPLE: Bed,
-  SFAMILLY: Bed,
-  DFAMILLY: Bed,
+  SFAMILLY: Hotel,
+  DFAMILLY: Hotel,
+  SSINGLE: Bed,
+  STWIN: BedDouble,
+
 } as const;
 
 export default function RoomFilter({

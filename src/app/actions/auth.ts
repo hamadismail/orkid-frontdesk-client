@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  "https://ecofrontdesk-server.vercel.app/api/v1";
+  "https://putrafrontdesk-server.vercel.app/api/v1";
 
 type AuthActionResult = {
   success: boolean;
