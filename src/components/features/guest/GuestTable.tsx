@@ -27,6 +27,7 @@ import {
   Search,
   Printer,
   ChevronDown,
+  RotateCcw,
 } from "lucide-react";
 import { GuestDetailsDialog } from "@/src/shared/GuestDetailsDialog";
 import { IGuest } from "@/src/types/guest.interface";
@@ -51,6 +52,7 @@ import PrintableTable from "@/src/shared/DepositReceipt";
 export default function GuestTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [arrivalDate, setArrivalDate] = useState<string>("");
   const [status, setStatus] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("createdAt");
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
@@ -62,14 +64,23 @@ export default function GuestTable() {
     {},
   );
 
+  const handleClearFilters = () => {
+    setSearch("");
+    setArrivalDate("");
+    setStatus("all");
+    setSortBy("createdAt");
+    setPage(1);
+  };
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations-guest-view", page, search, status, sortBy],
-    queryFn: () => getAllReservations({ 
-      page, 
-      search, 
-      status: status === "all" ? undefined : status, 
-      sortBy, 
-      sortOrder: "desc" 
+    queryKey: ["reservations-guest-view", page, search, status, sortBy, arrivalDate],
+    queryFn: () => getAllReservations({
+      page,
+      search,
+      status: status === "all" ? undefined : status,
+      sortBy,
+      sortOrder: "desc",
+      arrival: arrivalDate || undefined,
     }),
   });
 
@@ -146,13 +157,24 @@ export default function GuestTable() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <Input
-            placeholder="Search by guest name, phone, or reservation..."
+            placeholder="Search guests..."
             className="pl-9"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
             }}
+          />
+        </div>
+        <div className="relative w-48">
+          <Input
+            type="date"
+            value={arrivalDate}
+            onChange={(e) => {
+              setArrivalDate(e.target.value);
+              setPage(1);
+            }}
+            className="w-full"
           />
         </div>
         <Select
@@ -190,6 +212,17 @@ export default function GuestTable() {
             <SelectItem value="checkedOutAt">Check-out Date</SelectItem>
           </SelectContent>
         </Select>
+
+        {(search || arrivalDate || status !== "all" || sortBy !== "createdAt") && (
+          <Button
+            variant="ghost"
+            onClick={handleClearFilters}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border p-1">
