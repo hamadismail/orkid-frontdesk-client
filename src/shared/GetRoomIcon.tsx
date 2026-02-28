@@ -1,5 +1,5 @@
 import { BedDouble, BedSingle, Crown, Hotel } from "lucide-react";
-import { RoomType } from "../types/room.interface";
+import { RoomType } from "../types/enums";
 
 export const GetRoomIcon = (type: RoomType) => {
   switch (type) {

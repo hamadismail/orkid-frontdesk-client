@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use client";
 import React from "react";
 import {
   Table,
@@ -7,115 +9,85 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { DEPOSIT_METHOD, IBook } from "@/src/types/book.interface";
+import { IReservation } from "@/src/types/reservation.interface";
+import { DEPOSIT_METHOD } from "@/src/types/enums";
+import { IGuest } from "@/src/types/guest.interface";
 
 const PrintableTable = React.forwardRef<
   HTMLDivElement,
-  { deposits: IBook[] | undefined }
+  { deposits: IReservation[] | undefined }
 >((props, ref) => {
   const currentDateTime = new Date().toLocaleString();
 
-  const guestData = (props.deposits || []).sort((a, b) => {
-    const roomNoA = (a.roomId as { roomNo?: string })?.roomNo;
-    const roomNoB = (b.roomId as { roomNo?: string })?.roomNo;
-
-    if (roomNoA && roomNoB) {
-      return roomNoA.localeCompare(roomNoB);
-    }
-    if (roomNoA) return -1; // A comes first
-    if (roomNoB) return 1; // B comes first
-    return 0; // Maintain original order if both are undefined
+  const data = (props.deposits || []).sort((a, b) => {
+    const roomNoA = (a.roomId as any)?.roomNo || "";
+    const roomNoB = (b.roomId as any)?.roomNo || "";
+    return roomNoA.localeCompare(roomNoB);
   });
 
-  // const totals = guestData.reduce((acc, deposit) => {
-  //   return acc + (deposit.payment.deposit || 0);
-  // }, 0);
-
-  const categorizedTotals = guestData.reduce(
-    (acc, deposit) => {
-      const method = deposit.payment.depositMethod || DEPOSIT_METHOD.CASH;
-      if (method === DEPOSIT_METHOD.CASH) {
-        acc.cash += deposit.payment.deposit || 0;
-      } else if (method === DEPOSIT_METHOD.OR) {
-        acc.qr += deposit.payment.deposit || 0;
-      } else {
-        acc.others += deposit.payment.deposit || 0;
-      }
+  const categorizedTotals = data.reduce(
+    (acc, res) => {
+      const method = res.payment.depositMethod || DEPOSIT_METHOD.CASH;
+      const amount = res.payment.deposit || 0;
+      if (method === DEPOSIT_METHOD.CASH) acc.cash += amount;
+      else if (method === DEPOSIT_METHOD.QR) acc.qr += amount;
+      else acc.others += amount;
       return acc;
     },
     { cash: 0, qr: 0, others: 0 }
   );
 
   return (
-    <div ref={ref} className="p-4 text-xs">
-      <div className="text-center mb-4">
-        <h1 className="text-lg font-bold">Deposit Report</h1>
-        <p>Report Date: {currentDateTime}</p>
+    <div ref={ref} className="p-8 text-[10px] font-mono bg-white text-black">
+      <div className="text-center mb-6 border-b pb-4">
+        <h1 className="text-xl font-bold uppercase tracking-widest">ECO HOTEL - Deposit Report</h1>
+        <p>Generated: {currentDateTime}</p>
       </div>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-10">No.</TableHead>
-            <TableHead>Room</TableHead>
-            <TableHead>Guest Name</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Payment Method</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Guest Signature</TableHead>
+          <TableRow className="border-black">
+            <TableHead className="w-10">#</TableHead>
+            <TableHead>ROOM</TableHead>
+            <TableHead>GUEST</TableHead>
+            <TableHead className="text-right">DEPOSIT (RM)</TableHead>
+            <TableHead>METHOD</TableHead>
+            <TableHead>DATE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {guestData?.map((deposit, index) => (
-            <TableRow key={deposit._id ?? ""}>
-              <TableCell>{index + 1}</TableCell>
-              <TableCell>
-                {(deposit.roomId as { roomNo?: string })?.roomNo}
-              </TableCell>
-              <TableCell className="text-left">
-                {deposit.guest.name.slice(0, 10)}...
-              </TableCell>
-              <TableCell>{deposit.payment.deposit?.toFixed(2)}</TableCell>
-              <TableCell>
-                {deposit.payment.depositMethod || DEPOSIT_METHOD.CASH}
-              </TableCell>
-              <TableCell>
-                {deposit.createdAt
-                  ? new Date(deposit.createdAt).toLocaleDateString()
-                  : "N/A"}
-              </TableCell>
-            </TableRow>
-          ))}
+          {data?.map((res, index) => {
+            const guest = res.guestId as unknown as IGuest;
+            const room = res.roomId as any;
+            return (
+                <TableRow key={res._id} className="border-black">
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell>{room?.roomNo}</TableCell>
+                  <TableCell>{guest?.name?.slice(0, 20)}</TableCell>
+                  <TableCell className="text-right">{res.payment.deposit?.toFixed(2)}</TableCell>
+                  <TableCell>{res.payment.depositMethod || DEPOSIT_METHOD.CASH}</TableCell>
+                  <TableCell>{res.createdAt ? new Date(res.createdAt).toLocaleDateString() : "-"}</TableCell>
+                </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
-                <div className="mt-4 flex justify-end">
-              <div className="w-1/2">
-                <div className="flex justify-between font-bold pt-2">
-                  <span>Cash Total:</span>
-                  <span>{categorizedTotals.cash.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between pt-2">
-                  <span>QR/Bank Transfer Total:</span>
-                  <span>{categorizedTotals.qr.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between pt-2">
-                  <span>Others Total:</span>
-                  <span>{categorizedTotals.others.toFixed(2)}</span>
-                </div>
-                {/* <div className="flex justify-between font-bold pt-2">
-                  <span>Grand Total:</span>
-                  <span>{totals.toFixed(2)}</span>
-                </div> */}
-              </div>
-            </div>      <div className="mt-20 flex justify-between text-xs">
-        <div className="text-center">
-          <p className="border-t pt-1">Prepared By</p>
+
+      <div className="mt-8 flex justify-end">
+        <div className="w-64 space-y-1 border-t-2 border-black pt-2">
+            <div className="flex justify-between"><span>CASH:</span><span>RM {categorizedTotals.cash.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>QR/BANK:</span><span>RM {categorizedTotals.qr.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span>OTHERS:</span><span>RM {categorizedTotals.others.toFixed(2)}</span></div>
+            <div className="flex justify-between font-bold border-t border-black pt-1">
+                <span>TOTAL:</span>
+                <span>RM {(categorizedTotals.cash + categorizedTotals.qr + categorizedTotals.others).toFixed(2)}</span>
+            </div>
         </div>
-        <div className="text-center">
-          <p className="border-t pt-1">Checked By</p>
-        </div>
-        <div className="text-center">
-          <p className="border-t pt-1">Approved By</p>
-        </div>
+      </div>
+
+      <div className="mt-24 grid grid-cols-3 gap-8 text-center text-[8px] uppercase">
+          <div><p className="border-t border-black pt-1">Prepared By</p></div>
+          <div><p className="border-t border-black pt-1">Verified By</p></div>
+          <div><p className="border-t border-black pt-1">Authorized By</p></div>
       </div>
     </div>
   );

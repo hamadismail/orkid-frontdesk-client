@@ -10,7 +10,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { IPayment } from "@/src/types/payment.interface";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { getReceipt } from "@/src/services/payment.service";
 
 export function PaymentReceiptDialog({
   payment,
@@ -27,10 +27,7 @@ export function PaymentReceiptDialog({
     error,
   } = useQuery({
     queryKey: ["receipt", payment._id],
-    queryFn: async () => {
-      const { data } = await axios.get(`/payments/receipt/${payment._id}`);
-      return data.data;
-    },
+    queryFn: () => getReceipt(payment._id!),
     enabled: !!payment._id && open,
   });
 
@@ -45,7 +42,7 @@ export function PaymentReceiptDialog({
         {receiptData && (
           <PaymentInvoice
             bookingInfo={receiptData}
-            onConfirmBooking={() => {}}
+            onConfirmBooking={async () => {}}
             isBooking={false}
             printOnly
           />

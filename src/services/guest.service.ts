@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { API_BASE_URL } from '../lib/config';
 
 const createQueryString = (params: any) => {
@@ -11,9 +10,9 @@ const createQueryString = (params: any) => {
   return new URLSearchParams(cleanParams).toString();
 };
 
-export const getAllPayments = async (params?: any) => {
+export const getAllGuests = async (params?: any) => {
   const query = createQueryString(params || {});
-  const res = await fetch(`${API_BASE_URL}/payments?${query}`, {
+  const res = await fetch(`${API_BASE_URL}/guests?${query}`, {
     method: 'GET',
     cache: 'no-store',
     credentials: 'include',
@@ -22,8 +21,8 @@ export const getAllPayments = async (params?: any) => {
   return result.data || { data: [], meta: { total: 0, page: 1, limit: 10 } };
 };
 
-export const createPayment = async (data: any) => {
-  const res = await fetch(`${API_BASE_URL}/payments`, {
+export const createGuest = async (data: any) => {
+  const res = await fetch(`${API_BASE_URL}/guests`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -33,23 +32,12 @@ export const createPayment = async (data: any) => {
   return result.data || {};
 };
 
-export const getReceipt = async (paymentId: string) => {
-  const res = await fetch(`${API_BASE_URL}/payments/receipt/${paymentId}`, {
+export const getGuestDetails = async (id: string) => {
+  const res = await fetch(`${API_BASE_URL}/guests/${id}`, {
     method: 'GET',
     cache: 'no-store',
     credentials: 'include',
   });
   const result = await res.json();
-  return result.data || {};
-};
-
-export const getSalesReport = async (params: any) => {
-  const query = createQueryString(params || {});
-  const res = await fetch(`${API_BASE_URL}/payments/sales-report?${query}`, {
-    method: 'GET',
-    cache: 'no-store',
-    credentials: 'include',
-  });
-  const result = await res.json();
-  return result.data || { data: [], meta: { total: 0, page: 1, limit: 10 } };
+  return result.data || { guest: {}, history: [] };
 };

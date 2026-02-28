@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
@@ -13,28 +14,23 @@ import {
 import { Input } from "@/src/components/ui/input";
 import {
   CalendarCheck,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Calendar,
+  Loader2,
   User,
-  Mail,
+  Calendar,
+  Check,
   Phone,
+  Mail,
+  Fingerprint,
   Globe,
-  CreditCard,
-  FileText,
-  BookOpen,
-  Hotel,
-  Users,
   DollarSign,
+  Users,
   MessageSquare,
-  PersonStanding,
+  Plane,
 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import axios from "axios";
 import { Calendar as DatePicker } from "@/src/components/ui/calendar";
-import { format, isValid } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import {
   Popover,
   PopoverContent,
@@ -49,29 +45,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { Badge } from "@/src/components/ui/badge";
 import { Separator } from "@/src/components/ui/separator";
-import { Card, CardContent } from "@/src/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/src/components/ui/tabs";
-
-import { GetRoomIcon } from "@/src/shared/GetRoomIcon";
-import { PaymentInvoice } from "../../../shared/PaymentInvoice";
 import { PreviousGuestSearch } from "../guest/PreviousGuestSearch";
 import { IRoom } from "@/src/types/room.interface";
 import {
-  DEPOSIT_METHOD,
-  GUEST_STATUS,
-  IBook,
   OTAS,
   PAYMENT_METHOD,
-} from "@/src/types/book.interface";
+  RESERVATION_STATUS,
+  DEPOSIT_METHOD,
+} from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
-import { TPaymentReceiptInfo } from "@/src/types/payment.interface";
+import { IGuest } from "@/src/types/guest.interface";
+import {
+  createReservation,
+  checkInReservation,
+} from "@/src/services/reservation.service";
 
 type BookRoomDialogProps = {
   room: IRoom;
@@ -82,336 +70,205 @@ type BookRoomDialogProps = {
   className?: string;
 };
 
-type FormData = {
-  guest: {
-    name: string;
-    email: string;
-    phone: string;
-    country: string;
-    passport: string;
-    ic: string;
-    otas: OTAS;
-    refId: string;
-    status: GUEST_STATUS;
-  };
-  stay: {
-    arrival?: Date;
-    departure?: Date;
-    adults: number;
-    children: number;
-  };
-  payment: {
-    roomPrice: string;
-    sst: string;
-    tourismTax: string;
-    discount: string;
-    paidAmount: string;
-    deposit: string;
-    depositMethod: DEPOSIT_METHOD;
-    paymentMethod: PAYMENT_METHOD;
-    remarks: string;
-  };
-};
-
 const STEPS = [
   { number: 1, title: "Guest", icon: User },
   { number: 2, title: "Stay", icon: Calendar },
-  { number: 3, title: "Payment", icon: CreditCard },
+  { number: 3, title: "Rates", icon: DollarSign },
   { number: 4, title: "Confirm", icon: Check },
 ] as const;
+
+interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  country: string;
+  passport: string;
+  company: string;
+  notes: string;
+  source: OTAS;
+  refId: string;
+  arrivalDate: Date;
+  departureDate?: Date;
+  adults: number;
+  children: number;
+  roomPrice: string;
+  paidAmount: string;
+  paymentMethod: PAYMENT_METHOD;
+  deposit: string;
+  depositMethod: DEPOSIT_METHOD;
+  remarks: string;
+  sst: string;
+  tourismTax: string;
+  discount: string;
+}
 
 export default function BookRoomDialog({
   room,
   allReservations,
-  onClose,
   variant = "default",
   size = "sm",
   className,
 }: BookRoomDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
-  const [selectedGuest, setSelectedGuest] = useState<IBook | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<IGuest | null>(null);
   const queryClient = useQueryClient();
 
-  const isReserved = useMemo(() => {
-    if (!room?._id) return [];
+  const existingReservation = useMemo(() => {
+    return allReservations?.find((res) => {
+      const resRoomId =
+        typeof res.roomId === "object" ? res.roomId._id : res.roomId;
+      return (
+        resRoomId === room._id && res.status === RESERVATION_STATUS.CONFIRMED
+      );
+    });
+  }, [allReservations, room._id]);
 
-    const roomIdStr = room._id.toString();
-
-    return (
-      allReservations?.filter((res) => {
-        const reservationRoomId =
-          typeof res.roomId === "string" ? res.roomId : res.roomId?._id;
-
-        return reservationRoomId === roomIdStr;
-      }) || []
-    );
-  }, [allReservations, room?._id]);
-
-  const reserveGuest = isReserved[0];
-
-
-  // Form State
   const [formData, setFormData] = useState<FormData>({
-    guest: {
-      name: "",
-      email: "",
-      phone: "",
-      country: "",
-      passport: "",
-      ic: "",
-      otas: "" as OTAS,
-      refId: "",
-      status: GUEST_STATUS.CHECKED_IN,
-    },
-    stay: {
-      arrival: new Date(),
-      departure: undefined,
-      adults: room.adults ?? 1,
-      children: room.children ?? 0,
-    },
-    payment: {
-      roomPrice: "",
-      sst: "",
-      tourismTax: "",
-      discount: "",
-      paidAmount: "",
-      deposit: "",
-      depositMethod: "" as DEPOSIT_METHOD,
-      paymentMethod: "" as PAYMENT_METHOD,
-      remarks: "",
-    },
+    name: "",
+    email: "",
+    phone: "",
+    country: "",
+    passport: "",
+    company: "",
+    notes: "",
+    source: OTAS.WALKING_GUEST,
+    refId: "",
+    arrivalDate: new Date(),
+    departureDate: undefined,
+    adults: 1,
+    children: 0,
+    roomPrice: "",
+    paidAmount: "0",
+    paymentMethod: PAYMENT_METHOD.CASH,
+    deposit: "0",
+    depositMethod: DEPOSIT_METHOD.CASH,
+    remarks: "",
+    sst: "0",
+    tourismTax: "0",
+    discount: "0",
   });
 
-  // Handle guest selection
-  const handleGuestSelection = useCallback((guest: IBook) => {
-    setSelectedGuest(guest);
-
-    setFormData((prev) => ({
-      ...prev,
-      guest: {
-        name: guest.guest.name,
-        email: guest.guest.email || "",
-        phone: guest.guest.phone,
-        country: guest.guest.country || "",
-        passport: guest.guest.passport || "",
-        ic: "",
-        otas: guest.guest.otas || OTAS.BOOKING_COM,
-        refId: guest.guest.refId || "",
-        status: GUEST_STATUS.CHECKED_IN,
-      },
-      stay: {
-        ...prev.stay,
-        departure: new Date(),
-        adults: guest.stay.adults || 1,
-        children: guest.stay.children || 0,
-      },
-      payment: {
-        ...prev.payment,
-        roomPrice: guest?.payment?.roomPrice?.toString() || "",
-        sst: guest?.payment?.sst?.toString() || "",
-        tourismTax: guest?.payment?.tourismTax?.toString() || "",
-        discount: guest?.payment?.discount?.toString() || "",
-        paidAmount: guest?.payment?.paidAmount?.toString() || "",
-        deposit: guest?.payment?.deposit?.toString() || "",
-        depositMethod: guest?.payment?.depositMethod || DEPOSIT_METHOD.CASH,
-        paymentMethod: guest?.payment?.paymentMethod || PAYMENT_METHOD.CASH,
-        remarks: guest?.payment?.remarks || "",
-      },
-    }));
-
-    toast.success(`Guest information loaded: ${guest.guest.name}`);
-  }, []);
-
-  // Set reserved guest info
   useEffect(() => {
-    if (reserveGuest) {
+    if (existingReservation) {
+      const guest = existingReservation.guestId as unknown as IGuest;
       setFormData((prev) => ({
         ...prev,
-        guest: {
-          ...prev.guest,
-          refId: reserveGuest.guest?.refId || "",
-          name: reserveGuest.guest?.name || "",
-          email: reserveGuest.guest?.email || "",
-          phone: reserveGuest.guest?.phone || "",
-          country: reserveGuest.guest?.country || "",
-          passport: reserveGuest.guest?.passport || "",
-          otas: (reserveGuest.guest?.otas as OTAS) || OTAS.WALKING_GUEST,
-        },
-        stay: {
-          ...prev.stay,
-          departure: reserveGuest.stay?.departure
-            ? new Date(reserveGuest.stay.departure)
-            : prev.stay.departure,
-          adults: reserveGuest.stay.adults ?? 1,
-          children: reserveGuest.stay.children ?? 0,
-        },
-        payment: {
-          ...prev.payment,
-          roomPrice: reserveGuest.payment?.roomPrice?.toString() || "",
-          sst: reserveGuest.payment?.sst?.toString() || "",
-          tourismTax: reserveGuest.payment?.tourismTax?.toString() || "",
-          // discount: reserveGuest.payment?.discount?.toString() || "",
-          // paidAmount: reserveGuest.payment?.paidAmount?.toString() || "",
-        },
+        name: guest?.name || "",
+        phone: guest?.phone || "",
+        email: guest?.email || "",
+        passport: guest?.passport || "",
+        country: guest?.country || "",
+        source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
+        refId: existingReservation.confirmationNo,
+        arrivalDate: new Date(existingReservation.stay.arrival),
+        departureDate: new Date(existingReservation.stay.departure),
+        adults: existingReservation.stay.adults,
+        children: existingReservation.stay.children,
+        roomPrice: existingReservation.rate.roomPrice.toString(),
+        paidAmount: existingReservation.payment.paidAmount.toString(),
+        remarks: existingReservation.payment.remarks || "",
+        sst: existingReservation.rate.sst?.toString() || "0",
+        tourismTax: existingReservation.rate.tourismTax?.toString() || "0",
+        discount: existingReservation.rate.discount?.toString() || "0",
       }));
+      setSelectedGuest(guest);
     }
-  }, [reserveGuest]);
+  }, [existingReservation]);
 
-  // Calculations
-  const calculateNights = useCallback(() => {
-    const { arrival, departure } = formData.stay;
-    if (arrival && departure) {
-      const diffTime = Math.abs(departure.getTime() - arrival.getTime());
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+  const calculateNights = () => {
+    if (formData.arrivalDate && formData.departureDate) {
+      return Math.max(
+        1,
+        differenceInCalendarDays(formData.departureDate, formData.arrivalDate),
+      );
     }
-    return 0;
-  }, [formData.stay]);
-
-  const calculateTotal = useCallback(() => {
-    const nights = calculateNights();
-    const roomPrice = parseFloat(formData.payment.roomPrice) || 0;
-    return roomPrice * Math.max(nights, 1);
-  }, [calculateNights, formData.payment.roomPrice]);
-
-  const calculateDue = useCallback(() => {
-    const total = calculateTotal();
-    const paid = parseFloat(formData.payment.paidAmount) || 0;
-    const advancePayment = Number(reserveGuest?.payment?.paidAmount || "0");
-    return total - (paid + advancePayment);
-  }, [calculateTotal, formData.payment.paidAmount, reserveGuest]);
-
-  // Mutation
-  type CreateBookingResponse = {
-    booking: IBook;
-    receiptData: TPaymentReceiptInfo;
+    return 1;
   };
 
-  const { mutateAsync: bookRoom, isPending } = useMutation<CreateBookingResponse>({
+  const calculateSubtotal = () => {
+    const price = parseFloat(formData.roomPrice || "0");
+    const nights = calculateNights();
+    const sst = parseFloat(formData.sst || "0");
+    const ttax = parseFloat(formData.tourismTax || "0");
+    const disc = parseFloat(formData.discount || "0");
+    return price * nights + sst + ttax - disc;
+  };
+
+  const { mutateAsync: performCheckIn, isPending } = useMutation({
     mutationFn: async () => {
-      const res = await axios.post("/book", {
-        bookingInfo: {
-          guest: { ...formData.guest },
-          stay: { ...formData.stay },
-          payment: {
-            ...formData.payment,
-            paidAmount: Number(formData.payment.paidAmount || "0"),
-            subtotal: calculateTotal(),
-            dueAmount: calculateDue(),
-          },
-          roomId: room?._id,
-          currentPaid: parseFloat(formData.payment.paidAmount || "0").toFixed(
-            2,
-          ),
-        },
-      }, { timeout: 20000 });
-      return res.data?.data;
-    },
-    onError: (error: unknown) => {
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 409) {
-          toast.error("Booking conflict", {
-            description: error.response.data?.message || "Room not available",
-          });
-        } else if (error.code === "ECONNABORTED") {
-          toast.error("Request timeout", {
-            description:
-              "Check-in is taking too long. Please retry and verify if the room status changed.",
-          });
-        } else {
-          toast.error("Booking failed", {
-            description: error.response?.data?.message || error.message,
-          });
-        }
+      if (existingReservation) {
+        return await checkInReservation(existingReservation._id!);
       } else {
-        toast.error("Booking failed", {
-          description: "An unexpected error occurred",
-        });
+        const subtotal = calculateSubtotal();
+        const paid = parseFloat(formData.paidAmount || "0");
+
+        const reservationData: any = {
+          roomId: room._id,
+          status: RESERVATION_STATUS.CHECKED_IN,
+          stay: {
+            arrival: formData.arrivalDate,
+            departure: formData.departureDate,
+            adults: formData.adults,
+            children: formData.children,
+          },
+          rate: {
+            roomPrice: parseFloat(formData.roomPrice || "0"),
+            sst: parseFloat(formData.sst || "0"),
+            tourismTax: parseFloat(formData.tourismTax || "0"),
+            discount: parseFloat(formData.discount || "0"),
+            subtotal: subtotal,
+          },
+          payment: {
+            paidAmount: paid,
+            dueAmount: subtotal - paid,
+            paymentMethod: formData.paymentMethod,
+            deposit: formData.deposit,
+            depositMethod: formData.depositMethod,
+            remarks: formData.remarks,
+          },
+          source: formData.source,
+          refId: formData.refId,
+        };
+
+        if (selectedGuest?._id) {
+          reservationData.guestId = selectedGuest._id;
+        } else {
+          if (!formData.name) throw new Error("Guest name is required");
+          reservationData.guest = {
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            passport: formData.passport,
+            country: formData.country,
+          };
+        }
+
+        return await createReservation(reservationData);
       }
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
+      toast.success("Check-in completed successfully");
+      setOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to complete check-in");
+    },
   });
 
-  const handleClose = () => {
-    setOpen(false);
-    resetForm();
-    onClose?.();
-  };
-
-  const resetForm = () => {
-    setFormData({
-      guest: {
-        name: "",
-        email: "",
-        phone: "",
-        country: "",
-        passport: "",
-        ic: "",
-        otas: OTAS.BOOKING_COM,
-        refId: "",
-        status: GUEST_STATUS.CHECKED_IN,
-      },
-      stay: {
-      arrival: new Date(),
-      departure: undefined,
-      adults: room.adults ?? 1,
-      children: room.children ?? 0,
-    },
-      payment: {
-        roomPrice: "",
-        sst: "",
-        tourismTax: "",
-        discount: "",
-        paidAmount: "",
-        deposit: "",
-        depositMethod: DEPOSIT_METHOD.CASH,
-        paymentMethod: PAYMENT_METHOD.CASH,
-        remarks: "",
-      },
-    });
-    setStep(1);
-    setSelectedGuest(null);
-  };
-
-  const handleNext = () => {
-    const validations = {
-      1: () => {
-        const { name, phone, otas, refId, passport } = formData.guest;
-        return name && phone && otas && refId && passport;
-      },
-      2: () =>
-        formData.stay.arrival &&
-        formData.stay.departure &&
-        formData.stay.adults,
-      3: () => {
-        const { roomPrice, paidAmount, paymentMethod, depositMethod, remarks } =
-          formData.payment;
-        return (
-          roomPrice && paidAmount && paymentMethod && depositMethod && remarks
-        );
-      },
-    };
-
-    if (validations[step as keyof typeof validations]?.()) {
-      setStep(step + 1);
-    } else {
-      toast.warning("Please fill in all required fields");
-    }
-  };
-
-  const handleBack = () => step > 1 && setStep(step - 1);
-
-  const updateFormData = useCallback(
-    (section: keyof FormData, updates: Partial<FormData[keyof FormData]>) => {
-      setFormData((prev) => ({
-        ...prev,
-        [section]: { ...prev[section], ...updates },
-      }));
-    },
-    [],
-  );
+  const handleNext = () => setStep(step + 1);
+  const handleBack = () => setStep(step - 1);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) setStep(1);
+      }}
+    >
       <DialogTrigger asChild>
         <Button
           variant={variant}
@@ -422,625 +279,552 @@ export default function BookRoomDialog({
           Check-in
         </Button>
       </DialogTrigger>
-
-      <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 overflow-auto">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                {GetRoomIcon(room.roomType)}
-              </div>
-              <div>
-                <DialogTitle className="text-lg font-semibold">
-                  Book Room {room.roomNo}
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  {room.roomType} • Floor {room.roomFloor} • Max{" "}
-                  {/* {room.maxCapacity} guests */}
-                </p>
-              </div>
+      <DialogContent className="sm:max-w-4xl max-h-[95vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <CalendarCheck className="h-6 w-6 text-primary" />
             </div>
-            {selectedGuest && (
-              <Badge variant="outline" className="gap-1">
-                <User className="h-3 w-3" />
-                Previous Guest
-              </Badge>
-            )}
+            <div>
+              <DialogTitle className="text-xl">
+                Room {room.roomNo} Check-in
+              </DialogTitle>
+              <DialogDescription>
+                {existingReservation
+                  ? `Reservation ${existingReservation.confirmationNo}`
+                  : "New walk-in guest"}
+              </DialogDescription>
+            </div>
           </div>
         </DialogHeader>
 
-        {/* Progress Steps */}
-        <div className="px-6 py-4 border-b">
-          <div className="flex items-center justify-between">
-            {STEPS.map(({ number, title, icon: Icon }) => (
-              <div key={number} className="flex flex-col items-center flex-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "w-8 h-8 rounded-full flex items-center justify-center transition-all",
-                      step === number && "bg-primary text-primary-foreground",
-                      step > number &&
-                        "bg-green-100 text-green-800 border-2 border-green-500",
-                      step < number && "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {step > number ? (
-                      <Check className="h-4 w-4" />
-                    ) : (
-                      <Icon className="h-4 w-4" />
-                    )}
-                  </div>
-                  {step >= number && (
-                    <div className="ml-2">
-                      <div className="text-xs font-medium">Step {number}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {title}
-                      </div>
-                    </div>
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {/* Steps Indicator */}
+          <div className="flex justify-between mb-8">
+            {STEPS.map((s) => (
+              <div
+                key={s.number}
+                className="flex flex-col items-center gap-2 flex-1 relative"
+              >
+                <div
+                  className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors z-10 bg-white",
+                    step === s.number
+                      ? "border-primary text-primary font-bold"
+                      : step > s.number
+                        ? "border-green-500 bg-green-50 text-green-500"
+                        : "border-muted text-muted-foreground",
+                  )}
+                >
+                  {step > s.number ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <s.icon className="h-5 w-5" />
                   )}
                 </div>
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    step >= s.number
+                      ? "text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {s.title}
+                </span>
+                {s.number < 4 && (
+                  <div className="absolute top-5 left-1/2 w-full h-1 bg-muted z-0" />
+                )}
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Form Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {/* Step 1: Guest Information */}
           {step === 1 && (
             <div className="space-y-6">
               <PreviousGuestSearch
-                value={formData.guest.name}
-                selectedGuest={selectedGuest}
-                onSelectedGuestChange={setSelectedGuest}
-                onValueChange={(value) => updateFormData("guest", { name: value })}
-                onGuestSelect={handleGuestSelection}
+                label="Guest Full Name *"
+                placeholder="Enter full name (search returning guests...)"
+                value={formData.name || ""}
+                onGuestSelect={(g) => {
+                  setSelectedGuest(g);
+                  setFormData((prev) => ({
+                    ...prev,
+                    name: g.name || "",
+                    phone: g.phone || "",
+                    email: g.email || "",
+                    passport: g.passport || "",
+                    country: g.country || "",
+                    company: g.company || "",
+                    notes: g.notes || "",
+                  }));
+                }}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, name: v }))
+                }
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Phone className="h-3 w-3" /> Phone Number
+                  </Label>
+                  <Input
+                    value={formData.phone || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                    placeholder="+60..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="h-3 w-3" /> Email Address
+                  </Label>
+                  <Input
+                    value={formData.email || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="guest@example.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Fingerprint className="h-3 w-3" /> Passport / IC No.
+                  </Label>
+                  <Input
+                    value={formData.passport || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        passport: e.target.value,
+                      }))
+                    }
+                    placeholder="ID Number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="h-3 w-3" /> Country
+                  </Label>
+                  <Input
+                    value={formData.country || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        country: e.target.value,
+                      }))
+                    }
+                    placeholder="Malaysia"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <MessageSquare className="h-3 w-3" /> Company (Optional)
+                  </Label>
+                  <Input
+                    value={formData.company || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        company: e.target.value,
+                      }))
+                    }
+                    placeholder="Company Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2 text-muted-foreground">
+                    <MessageSquare className="h-3 w-3" /> Notes
+                  </Label>
+                  <Input
+                    value={formData.notes || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        notes: e.target.value,
+                      }))
+                    }
+                    placeholder="Special requests..."
+                  />
+                </div>
+              </div>
 
               <Separator />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Full Name *
-                  </Label>
-                  <Input
-                    value={formData.guest.name}
-                    onChange={(e) =>
-                      updateFormData("guest", { name: e.target.value })
-                    }
-                    placeholder="Guest Name"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    Phone *
-                  </Label>
-                  <Input
-                    value={formData.guest.phone}
-                    onChange={(e) =>
-                      updateFormData("guest", { phone: e.target.value })
-                    }
-                    placeholder="+60123456789"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </Label>
-                  <Input
-                    type="email"
-                    value={formData.guest.email}
-                    onChange={(e) =>
-                      updateFormData("guest", { email: e.target.value })
-                    }
-                    placeholder="john@example.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    Country
-                  </Label>
-                  <Input
-                    value={formData.guest.country}
-                    onChange={(e) =>
-                      updateFormData("guest", { country: e.target.value })
-                    }
-                    placeholder="Malaysia"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Passport/IC *
-                  </Label>
-                  <Input
-                    value={formData.guest.passport}
-                    onChange={(e) =>
-                      updateFormData("guest", { passport: e.target.value })
-                    }
-                    placeholder="A12345678"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    OTA/Reference *
+                    <Plane className="h-3 w-3" /> Booking Source
                   </Label>
                   <Select
-                    value={formData.guest.otas}
-                    onValueChange={(value: OTAS) =>
-                      updateFormData("guest", { otas: value })
+                    value={formData.source || ""}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({ ...prev, source: v as OTAS }))
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select OTA/Reference" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.values(OTAS).map((ota) => (
-                        <SelectItem key={ota} value={ota}>
-                          {ota}
+                      {Object.values(OTAS).map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Hotel className="h-4 w-4" />
-                    Reference ID *
+                    Reference ID
                   </Label>
                   <Input
-                    value={formData.guest.refId}
+                    value={formData.refId || ""}
                     onChange={(e) =>
-                      updateFormData("guest", { refId: e.target.value })
+                      setFormData((prev) => ({
+                        ...prev,
+                        refId: e.target.value,
+                      }))
                     }
-                    placeholder="Enter reference ID"
+                    placeholder="OTA Ref / Note"
                   />
                 </div>
               </div>
             </div>
           )}
 
-          {/* Step 2: Stay Information */}
           {step === 2 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Check-out Date *
-                      </Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !formData.stay.departure &&
-                                "text-muted-foreground",
-                            )}
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            {formData.stay.departure &&
-                            isValid(formData.stay.departure)
-                              ? format(formData.stay.departure, "PPP")
-                              : "Select date"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <DatePicker
-                            mode="single"
-                            selected={formData.stay.departure}
-                            onSelect={(date) =>
-                              updateFormData("stay", { departure: date })
-                            }
-                            disabled={{ before: new Date() }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Adults
-                      </Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={formData.stay.adults}
-                        onChange={(e) =>
-                          updateFormData("stay", {
-                            adults: parseInt(e.target.value) || 1,
-                          })
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Calendar className="h-3 w-3" /> Departure Date
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full text-left font-normal h-12"
+                      >
+                        {formData.departureDate
+                          ? format(formData.departureDate, "PPP")
+                          : "Select check-out date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <DatePicker
+                        mode="single"
+                        selected={formData.departureDate}
+                        onSelect={(d) =>
+                          setFormData((prev) => ({ ...prev, departureDate: d }))
                         }
+                        disabled={{ before: new Date() }}
                       />
-                    </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <PersonStanding className="h-4 w-4" />
-                        Children
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={formData.stay.children}
-                        onChange={(e) =>
-                          updateFormData("stay", {
-                            children: parseInt(e.target.value) || 0,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="bg-muted/30 p-4 rounded-lg flex flex-col justify-center border border-dashed">
+                  <span className="text-xs text-muted-foreground uppercase font-bold tracking-wider">
+                    Stay Duration
+                  </span>
+                  <span className="text-2xl font-bold">
+                    {calculateNights()} Night(s)
+                  </span>
+                </div>
 
-              <Card>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Duration
-                      </span>
-                      <span className="font-semibold">
-                        {calculateNights()} nights
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Check-in
-                      </span>
-                      <span className="font-medium">
-                        {format(formData.stay.arrival || new Date(), "PPP")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">
-                        Check-out
-                      </span>
-                      <span className="font-medium">
-                        {formData.stay.departure
-                          ? format(formData.stay.departure, "PPP")
-                          : "Not set"}
-                      </span>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Total Guests</span>
-                      <span className="font-bold">
-                        {formData.stay.adults + formData.stay.children}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="h-3 w-3" /> Adults
+                  </Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={formData.adults || 1}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        adults: parseInt(e.target.value) || 1,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Users className="h-3 w-3" /> Children
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={formData.children || 0}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        children: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Step 3: Payment Information */}
           {step === 3 && (
             <div className="space-y-6">
-              <Tabs defaultValue="payment">
-                <TabsList className="grid grid-cols-3">
-                  <TabsTrigger value="payment">Payment Details</TabsTrigger>
-                  <TabsTrigger value="breakdown">Cost Breakdown</TabsTrigger>
-                  <TabsTrigger value="summary">Summary</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="payment" className="space-y-4 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Room Price *
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.payment.roomPrice}
-                        onChange={(e) =>
-                          updateFormData("payment", {
-                            roomPrice: e.target.value,
-                          })
-                        }
-                        placeholder="200.00"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Deposit
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.payment.deposit}
-                        onChange={(e) =>
-                          updateFormData("payment", {
-                            deposit: e.target.value,
-                          })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4" />
-                        Paid Amount *
-                      </Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.payment.paidAmount}
-                        onChange={(e) =>
-                          updateFormData("payment", {
-                            paidAmount: e.target.value,
-                          })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        Deposit Method *
-                      </Label>
-                      <Select
-                        value={formData.payment.depositMethod}
-                        onValueChange={(value: DEPOSIT_METHOD) =>
-                          updateFormData("payment", { depositMethod: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Deposit Method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(DEPOSIT_METHOD).map((method) => (
-                            <SelectItem key={method} value={method}>
-                              {method}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4" />
-                        Payment Method *
-                      </Label>
-                      <Select
-                        value={formData.payment.paymentMethod}
-                        onValueChange={(value: PAYMENT_METHOD) =>
-                          updateFormData("payment", { paymentMethod: value })
-                        }
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select Payment Method" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.values(PAYMENT_METHOD).map((method) => (
-                            <SelectItem key={method} value={method}>
-                              {method}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Remarks *
-                      </Label>
-                      <Input
-                        value={formData.payment.remarks}
-                        onChange={(e) =>
-                          updateFormData("payment", { remarks: e.target.value })
-                        }
-                        placeholder="Additional notes or instructions"
-                      />
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Room Price (Per Night)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      type="number"
+                      value={formData.roomPrice || ""}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          roomPrice: e.target.value,
+                        }))
+                      }
+                      placeholder="0.00"
+                    />
                   </div>
-                </TabsContent>
+                </div>
+                <div className="space-y-2">
+                  <Label>Discount</Label>
+                  <Input
+                    type="number"
+                    value={formData.discount || "0"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        discount: e.target.value,
+                      }))
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>SST</Label>
+                  <Input
+                    type="number"
+                    value={formData.sst || "0"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, sst: e.target.value }))
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tourism Tax</Label>
+                  <Input
+                    type="number"
+                    value={formData.tourismTax || "0"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        tourismTax: e.target.value,
+                      }))
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
 
-                <TabsContent value="breakdown" className="space-y-4 pt-4">
-                  <Card>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Room Rate</span>
-                        <span>
-                          RM{" "}
-                          {parseFloat(
-                            formData.payment.roomPrice || "0",
-                          ).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Nights</span>
-                        <span>{calculateNights()} nights</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between font-semibold">
-                        <span>Subtotal</span>
-                        <span>RM {calculateTotal().toFixed(2)}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+              <Separator />
 
-                <TabsContent value="summary" className="space-y-4 pt-4">
-                  <Card>
-                    <CardContent className="space-y-4">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Total Amount
-                        </span>
-                        <span className="font-semibold">
-                          RM {calculateTotal().toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Amount Paid
-                        </span>
-                        <span className="font-semibold text-green-600">
-                          RM{" "}
-                          {Number(formData.payment.paidAmount || "0") +
-                            Number(reserveGuest?.payment?.paidAmount || "0")}
-                        </span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Balance Due
-                        </span>
-                        <span className="font-bold text-red-600">
-                          RM {calculateDue().toFixed(2)}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Amount Paid Now</Label>
+                  <Input
+                    type="number"
+                    value={formData.paidAmount || "0"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paidAmount: e.target.value,
+                      }))
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Payment Method</Label>
+                  <Select
+                    value={formData.paymentMethod || ""}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentMethod: v as PAYMENT_METHOD,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(PAYMENT_METHOD).map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Deposit Amount</Label>
+                  <Input
+                    type="number"
+                    value={formData.deposit || "0"}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        deposit: e.target.value,
+                      }))
+                    }
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Deposit Method</Label>
+                  <Select
+                    value={formData.depositMethod || ""}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        depositMethod: v as DEPOSIT_METHOD,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(DEPOSIT_METHOD).map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MessageSquare className="h-3 w-3" /> Remarks
+                </Label>
+                <Input
+                  value={formData.remarks || ""}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      remarks: e.target.value,
+                    }))
+                  }
+                  placeholder="Internal notes..."
+                />
+              </div>
             </div>
           )}
 
-          {/* Step 4: Confirmation */}
           {step === 4 && (
             <div className="space-y-6">
-              <PaymentInvoice
-                bookingInfo={{
-                  guest: {
-                    name: formData.guest.name,
-                    phone: formData.guest.phone,
-                    otas: formData.guest.otas,
-                    refId: formData.guest.refId,
-                  },
-                  stay: {
-                    arrival: formData.stay.arrival,
-                    departure: formData.stay.departure,
-                  },
-                  room: {
-                    number: room.roomNo,
-                    type: room.roomType,
-                  },
-                  payment: {
-                    paidAmount: parseFloat(formData.payment.paidAmount) || 0,
-                    deposit: parseFloat(formData.payment.deposit) || 0,
-                    depositMethod: formData.payment.depositMethod,
-                    method: formData.payment.paymentMethod,
-                    remarks: formData.payment.remarks,
-                  },
-                  paymentDate: new Date(),
-                  paymentId: `PAY-${Date.now().toString(36).toUpperCase()}`,
-                }}
-                onConfirmBooking={async () => {
-                  const result = await bookRoom();
-                  return result?.receiptData;
-                }}
-                onAfterPrint={async () => {
-                  await Promise.all([
-                    queryClient.invalidateQueries({ queryKey: ["rooms"] }),
-                    queryClient.invalidateQueries({ queryKey: ["book"] }),
-                    queryClient.invalidateQueries({ queryKey: ["reserve"] }),
-                  ]);
+              <div className="bg-primary/5 border rounded-xl p-6 text-center space-y-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  <Check className="h-8 w-8 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Ready to Check-in</h3>
+                  <p className="text-muted-foreground">
+                    Please review the stay details below.
+                  </p>
+                </div>
+              </div>
 
-                  toast.success("Room booked successfully!");
-                  handleClose();
-                }}
-                isBooking={isPending}
-              />
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="p-4 border rounded-lg space-y-1">
+                  <p className="text-muted-foreground text-xs uppercase font-bold">
+                    Guest
+                  </p>
+                  <p className="font-bold text-base">{formData.name}</p>
+                  <p>{formData.phone}</p>
+                </div>
+                <div className="p-4 border rounded-lg space-y-1">
+                  <p className="text-muted-foreground text-xs uppercase font-bold">
+                    Room
+                  </p>
+                  <p className="font-bold text-base">
+                    {room.roomNo} ({room.roomType})
+                  </p>
+                  <p>{calculateNights()} Night(s)</p>
+                </div>
+                <div className="p-4 border rounded-lg space-y-1 bg-muted/20 col-span-2 flex justify-between items-center">
+                  <div>
+                    <p className="text-muted-foreground text-xs uppercase font-bold">
+                      Total Balance
+                    </p>
+                    <p className="text-2xl font-black text-primary">
+                      RM {calculateSubtotal().toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-muted-foreground text-xs uppercase font-bold">
+                      Paid Today
+                    </p>
+                    <p className="text-xl font-bold text-green-600">
+                      RM {parseFloat(formData.paidAmount || "0").toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-6 py-4 border-t bg-muted/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {step > 1 && (
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
+        <div className="px-6 py-4 border-t bg-muted/20 flex justify-between shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={step === 1 || isPending}
+          >
+            Back
+          </Button>
+          {step < 4 ? (
+            <Button
+              onClick={handleNext}
+              disabled={
+                !formData.name || (step === 2 && !formData.departureDate)
+              }
+            >
+              Next
+            </Button>
+          ) : (
+            <Button
+              onClick={() => performCheckIn()}
+              disabled={isPending}
+              className="bg-green-600 hover:bg-green-700 min-w-35"
+            >
+              {isPending ? (
+                <Loader2 className="animate-spin mr-2 h-4 w-4" />
+              ) : (
+                <CalendarCheck className="mr-2 h-4 w-4" />
               )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {step < 4 ? (
-                <>
-                  <Button variant="outline" onClick={handleClose}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleNext} className="gap-2">
-                    {step === 3 ? "Review & Confirm" : "Continue"}
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </>
-              ) : null}
-            </div>
-          </div>
+              Complete Check-in
+            </Button>
+          )}
         </div>
       </DialogContent>
-
-      <DialogDescription className="sr-only">Book Room</DialogDescription>
     </Dialog>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

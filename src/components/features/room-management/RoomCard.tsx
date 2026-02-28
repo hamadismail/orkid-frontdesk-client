@@ -6,7 +6,8 @@ import { Dialog, DialogTrigger } from "@/src/components/ui/dialog";
 import RoomDetailsDialog from "./RoomDetailsDialog";
 import { cn } from "@/src/lib/utils";
 import RoomBadge from "@/src/components/features/room-management/RoomBadge"; // Re-import RoomBadge
-import { IRoom, RoomStatus } from "@/src/types/room.interface";
+import { IRoom } from "@/src/types/room.interface";
+import { RoomStatus } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
 
 type RoomCardProps = {
@@ -46,7 +47,7 @@ export default function RoomCard({
             roomStatus === RoomStatus.DIRTY &&
               "bg-orange-100 border-orange-400 dark:bg-orange-950 dark:border-orange-800",
             roomStatus === RoomStatus.OCCUPIED &&
-              "bg-red-100 border-red-400 dark:bg-red-950 dark:border-red-800"
+              "bg-red-100 border-red-400 dark:bg-red-950 dark:border-red-800",
           )}
         >
           {/* Card Heading */}
@@ -59,12 +60,26 @@ export default function RoomCard({
           </div>
 
           {/* Card Body */}
-          <div className="flex flex-col text-sm gap-2">
+          <div className="flex flex-col text-sm gap-2 my-2">
             {room.roomStatus === RoomStatus.SERVICE && (
-              <div className="font-bold">Services Request Submitted</div>
+              <div className="font-bold text-purple-600">Service Request</div>
             )}
 
-            <div>
+            {/* {roomStatus !== RoomStatus.AVAILABLE && guestName && (
+                <div className="bg-white/50 dark:bg-black/20 p-2 rounded-md border border-black/5">
+                    <p className="font-bold truncate">{guestName}</p>
+                    {arrival && departure && (
+                        <p className="text-[10px] opacity-70">
+                            {format(arrival, "MMM d")} - {format(departure, "MMM d")}
+                        </p>
+                    )}
+                    <Badge variant="outline" className="mt-1 text-[9px] h-4 px-1 uppercase leading-none">
+                        {guestStatus}
+                    </Badge>
+                </div>
+            )} */}
+
+            <div className="space-y-1">
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Home className="h-4 w-4" />
                 <span>Floor {room.roomFloor}</span>

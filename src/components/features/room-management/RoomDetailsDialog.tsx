@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import {
   DialogContent,
@@ -15,7 +16,8 @@ import CheckOut from "../room-services/CheckOut";
 import CancelReservationButton from "../room-services/CancelReservationButton";
 import RoomService from "../room-services/RoomService";
 import MoveRoom from "../room-services/MoveRoom";
-import { IRoom, RoomStatus } from "@/src/types/room.interface";
+import { IRoom } from "@/src/types/room.interface";
+import { RoomStatus } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
 import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
@@ -64,6 +66,11 @@ const STATUS_CONFIG = {
     label: "Service",
     description: "Maintenance required",
   },
+  [RoomStatus.OUT_OF_ORDER]: {
+    variant: "destructive" as const,
+    label: "Out of Order",
+    description: "Room is not available",
+  },
 } as const;
 
 export default function RoomDetailsDialog({
@@ -82,11 +89,11 @@ export default function RoomDetailsDialog({
 
   const config = STATUS_CONFIG[roomStatus];
 
-  const hasGuest = [
+  const hasGuest = (!!guestName || [
     RoomStatus.OCCUPIED,
     RoomStatus.RESERVED,
     RoomStatus.DUE_OUT,
-  ].includes(roomStatus);
+  ].includes(roomStatus));
 
   const getStayDuration = () => {
     if (!arrival || !departure) return null;
@@ -95,81 +102,6 @@ export default function RoomDetailsDialog({
         (1000 * 60 * 60 * 24),
     );
     return `${nights} night${nights !== 1 ? "s" : ""}`;
-  };
-
-  const actionButtons = () => {
-    switch (roomStatus) {
-      case RoomStatus.AVAILABLE:
-        return (
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={handleNewReservationClick}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Reserve
-            </Button>
-            <BookRoomDialog
-              room={room}
-              onClose={() => setOpen(false)}
-              // variant="default"
-              // size="sm"
-              // className="flex-1 gap-2"
-            />
-          </div>
-        );
-
-      case RoomStatus.RESERVED:
-        return (
-          <div className="flex gap-2 justify-end">
-            {reservation?._id && (
-              <CancelReservationButton
-                reservationId={reservation._id}
-                onClose={() => setOpen(false)}
-                // size="sm"
-                // variant="outline"
-                // className="flex-1 gap-2"
-              />
-            )}
-            <BookRoomDialog
-              room={room}
-              allReservations={allReservations}
-              onClose={() => setOpen(false)}
-              // variant="default"
-              // size="sm"
-              // className="flex-1 gap-2"
-            />
-          </div>
-        );
-
-      case RoomStatus.DIRTY:
-        return (
-          <div className="flex flex-col gap-2">
-            <Badge
-              variant="outline"
-              className="w-full justify-center py-2 bg-amber-50 dark:bg-amber-950/20"
-            >
-              Awaiting Cleaning
-            </Badge>
-            {/* <Button size="sm" className="gap-2">
-              <Clock className="h-3.5 w-3.5" />
-              Mark as Clean
-            </Button> */}
-          </div>
-        );
-
-      default:
-        return (
-          <div className="grid grid-cols-2 gap-2">
-            <RoomService room={room} onClose={() => setOpen(false)} />
-            <MoveRoom room={room} onClose={() => setOpen(false)} />
-            <StayOver room={room} onClose={() => setOpen(false)} />
-            <CheckOut room={room} onClose={() => setOpen(false)} />
-          </div>
-        );
-    }
   };
 
   const handleNewReservationClick = () => {
@@ -305,7 +237,74 @@ export default function RoomDetailsDialog({
 
       {/* Actions Footer */}
       <div className="px-6 pb-6 pt-4 border-t bg-muted/50">
-        {actionButtons()}
+        {roomStatus === RoomStatus.AVAILABLE && (
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleNewReservationClick}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Reserve
+            </Button>
+            <BookRoomDialog
+              room={room}
+              allReservations={allReservations}
+              onClose={() => setOpen(false)}
+            />
+          </div>
+        )}
+
+        {roomStatus === RoomStatus.RESERVED && (
+          <div className="flex gap-2 justify-end">
+            {reservation?._id && (
+              <CancelReservationButton
+                reservationId={reservation._id}
+                onClose={() => setOpen(false)}
+              />
+            )}
+            <BookRoomDialog
+              room={room}
+              allReservations={allReservations}
+              onClose={() => setOpen(false)}
+            />
+          </div>
+        )}
+
+        {roomStatus === RoomStatus.DIRTY && (
+          <div className="flex flex-col gap-2">
+            <Badge
+              variant="outline"
+              className="w-full justify-center py-2 bg-amber-50 dark:bg-amber-950/20"
+            >
+              Awaiting Cleaning
+            </Badge>
+          </div>
+        )}
+
+        {[RoomStatus.OCCUPIED, RoomStatus.DUE_OUT, RoomStatus.SERVICE].includes(roomStatus) && (
+          <div className="grid grid-cols-2 gap-2">
+            <RoomService room={room} onClose={() => setOpen(false)} />
+            {reservation && (
+                <>
+                    <MoveRoom 
+                        reservationId={reservation._id || ""} 
+                        currentRoom={room as any} 
+                        onClose={() => setOpen(false)} 
+                    />
+                    <StayOver 
+                        reservation={reservation} 
+                        onClose={() => setOpen(false)} 
+                    />
+                    <CheckOut 
+                        reservation={reservation} 
+                        onClose={() => setOpen(false)} 
+                    />
+                </>
+            )}
+          </div>
+        )}
       </div>
 
       <DialogDescription className="sr-only">Room Details</DialogDescription>

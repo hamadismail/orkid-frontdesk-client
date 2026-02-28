@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { format } from "date-fns";
+import { format, differenceInCalendarDays } from "date-fns";
 import {
   Card,
   CardContent,
@@ -10,76 +11,91 @@ import {
 import { Separator } from "../components/ui/separator";
 import { Button } from "../components/ui/button";
 import Image from "next/image";
-import { CircleCheck } from "lucide-react";
 import { IReservation } from "../types/reservation.interface";
+import { IGuest } from "../types/guest.interface";
+import { Printer } from "lucide-react";
 
 interface ReservationInvoiceProps {
-  bookingInfo: IReservation;
-  onConfirmBooking: () => void;
-  onBack: () => void;
-  isPending: boolean;
+  bookingInfo: any; // Can be single reservation object or array of reservations
+  onConfirmBooking?: () => void;
+  onBack?: () => void;
+  isPending?: boolean;
 }
 
 export default function ReservationInvoice({
   bookingInfo,
   isPending,
 }: ReservationInvoiceProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
+  // const contentRef = useRef<HTMLDivElement>(null);
 
+  // const handlePrint = useReactToPrint({
+  //   contentRef,
+  //   pageStyle: `
+  //     @page { size: A4; margin: 1cm; }
+  //     @media print { body { -webkit-print-color-adjust: exact; } }
+  //   `,
+  // });
+
+  const invoiceRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
-    // content: () => invoiceRef.current,
-    contentRef,
-    pageStyle: `
-      @page {
-        size: A4;
-        margin: 1cm;
-      }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact;
-        }
-        @page {
-          margin: 0;
-          size: auto;
-        }
-        @page :footer { display: none; }
-        @page :header { display: none; }
-      }
-    `,
+    contentRef: invoiceRef,
   });
 
-  const handleConfirmAndPrint = () => {
-    handlePrint();
-  };
+  if (!bookingInfo) return null;
 
-  const calculateNights = () => {
-    const diffTime = Math.abs(
-      new Date(bookingInfo.stay.departure).getTime() -
-        new Date(bookingInfo.stay.arrival).getTime(),
+  // Normalize data: always work with an array
+  const reservations: IReservation[] = Array.isArray(bookingInfo)
+    ? bookingInfo
+    : bookingInfo.reservations
+      ? bookingInfo.reservations
+      : [bookingInfo];
+
+  const mainRes = reservations[0];
+  const guest = mainRes.guestId as unknown as IGuest;
+  const group = mainRes.groupId as any;
+
+  const calculateNights = (res: IReservation) => {
+    return Math.max(
+      1,
+      differenceInCalendarDays(
+        new Date(res.stay.departure),
+        new Date(res.stay.arrival),
+      ),
     );
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const calculateTotal = () => {
-    const roomPrice = bookingInfo.payment.roomPrice || 0;
-    const tourismTax = bookingInfo.payment.tourismTax || 0;
-    const sst = bookingInfo.payment.sst || 0;
+  const totalRoomCharges = reservations.reduce((acc, res) => {
+    return acc + calculateNights(res) * (res.rate?.roomPrice || 0);
+  }, 0);
 
-    ////
-    const advancePayment = bookingInfo.payment.paidAmount || 0;
-    const discount = bookingInfo.payment.discount || 0;
-
-    const totalRoomCharge = roomPrice * calculateNights();
-
-    const totalAmount =
-      totalRoomCharge + tourismTax + sst - (discount + advancePayment);
-
-    return totalAmount.toFixed(2) || 0;
-  };
+  const totalSST = reservations.reduce(
+    (acc, res) => acc + (res.rate?.sst || 0),
+    0,
+  );
+  const totalTTax = reservations.reduce(
+    (acc, res) => acc + (res.rate?.tourismTax || 0),
+    0,
+  );
+  const totalDiscount = reservations.reduce(
+    (acc, res) => acc + (res.rate?.discount || 0),
+    0,
+  );
+  const grandTotal = reservations.reduce(
+    (acc, res) => acc + (res.rate?.subtotal || 0),
+    0,
+  );
+  const totalPaid = reservations.reduce(
+    (acc, res) => acc + (res.payment?.paidAmount || 0),
+    0,
+  );
+  const totalDue = reservations.reduce(
+    (acc, res) => acc + (res.payment?.dueAmount || 0),
+    0,
+  );
 
   return (
     <div className="max-w-4xl mx-auto overflow-auto">
-      <Card ref={contentRef} className="border-none shadow-none">
+      <Card ref={invoiceRef} className="border-none shadow-none">
         <CardHeader className="text-center">
           <Image
             src="/img/ecoHotel.png"
@@ -97,216 +113,150 @@ export default function ReservationInvoice({
         </CardHeader>
 
         <CardContent>
-          {/* Guest and Booking Info */}
-          <div className="grid grid-cols-2 justify-items-center">
+          <div className="grid grid-cols-2 justify-items-center mb-6">
             <div>
               <h2 className="text-lg font-semibold mb-2">Guest Details</h2>
-              <div className="grid grid-cols-[auto_1fr] gap-2 text-sm">
-                <div className="font-medium">Reservation No. / OTA:</div>
-                <div>
-                  {bookingInfo.guest.refId || bookingInfo.guest.otas || "-"}
-                </div>
-
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <div className="font-medium">Group Code:</div>
+                <div>{group?.groupCode || mainRes.confirmationNo}</div>
                 <div className="font-medium">Name:</div>
-                <div>{bookingInfo.guest.name}</div>
-
+                <div className="font-bold uppercase">{guest?.name}</div>
                 <div className="font-medium">Phone:</div>
-                <div>{bookingInfo.guest.phone}</div>
-
-                <div className="font-medium">Email:</div>
-                <div>{bookingInfo.guest.email || "-"}</div>
-
-                {/* <div className="font-medium">Nationality:</div>
-                <div>{bookingInfo.guest.country || "-"}</div> */}
-
-                <div className="font-medium">Passport:</div>
-                <div>{bookingInfo.guest.passport || "-"}</div>
-
-                <div className="font-medium">Number of Guest: </div>
-                <div>
-                  {bookingInfo.stay.adults ?? 1} Adults &{" "}
-                  {bookingInfo.stay.children ?? 0} Children
-                </div>
+                <div>{guest?.phone}</div>
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-semibold mb-2">Booking Details</h2>
-              <div className="grid grid-cols-[auto_1fr] gap-2 text-sm">
-                <div className="font-medium">Room No:</div>
-                <div>
-                  {typeof bookingInfo.roomId === "string"
-                    ? bookingInfo.roomId
-                    : bookingInfo.roomId?.roomNo || "-"}
-                </div>
-
-                <div className="font-medium">Room Type:</div>
-                <div>
-                  {typeof bookingInfo.roomId === "string"
-                    ? "-"
-                    : bookingInfo.roomId?.roomType || "-"}
-                </div>
-
-                {/* <div className="font-medium">No. of Guests:</div>
-                <div>{bookingInfo.room.numOfGuest || "-"}</div> */}
-
+              <h2 className="text-lg font-semibold mb-2">Stay Summary</h2>
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <div className="font-medium">Arrival:</div>
-                <div>{format(bookingInfo.stay.arrival, "PPp")}</div>
-
+                <div>{format(new Date(mainRes.stay.arrival), "PPP")}</div>
                 <div className="font-medium">Departure:</div>
-                <div>{format(bookingInfo.stay.departure, "PPp")}</div>
-
-                <div className="font-medium">Nights:</div>
-                <div>{calculateNights()}</div>
+                <div>{format(new Date(mainRes.stay.departure), "PPP")}</div>
+                <div className="font-medium">Total Rooms:</div>
+                <div className="font-bold">{reservations.length}</div>
               </div>
             </div>
           </div>
 
-          {/* Invoice Title */}
           <div className="text-center mt-2 mb-4">
-            <h2 className="text-lg font-bold inline-block border-b-2 pb-1 px-4">
+            <h2 className="text-lg font-bold inline-block border-b-2 pb-1 px-4 uppercase tracking-widest">
               Reservation Voucher
             </h2>
           </div>
 
-          {/* Charges Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-2 bg-muted p-2 font-semibold">
-              <div>Description</div>
-              <div className="text-right">Amount (RM)</div>
-            </div>
+          <div className="border rounded-lg overflow-hidden mb-6">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted font-semibold border-b">
+                  <th className="p-2 text-left">Room / Description</th>
+                  <th className="p-2 text-center">Nights</th>
+                  <th className="p-2 text-right">Rate</th>
+                  <th className="p-2 text-right">Total (RM)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservations.map((res, idx) => {
+                  const room = res.roomId as any;
+                  const nights = calculateNights(res);
+                  return (
+                    <tr key={idx} className="border-b last:border-0">
+                      <td className="p-2">
+                        <div className="font-bold">
+                          Room {room?.roomNo || "-"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {room?.roomType}
+                        </div>
+                      </td>
+                      <td className="p-2 text-center">{nights}</td>
+                      <td className="p-2 text-right">
+                        {res.rate.roomPrice.toFixed(2)}
+                      </td>
+                      <td className="p-2 text-right">
+                        {(nights * res.rate.roomPrice).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-            <div className="grid grid-cols-2 p-2 border-t text-sm">
-              <div>Room Charges ({calculateNights()} nights)</div>
-              <div className="text-right">
-                {calculateNights() * bookingInfo.payment.roomPrice || 0} RM
+          <div className="flex justify-end">
+            <div className="w-full max-w-xs space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Room Charges Total:</span>
+                <span>{totalRoomCharges.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 p-2 border-t text-sm">
-              <div>SST (8%)</div>
-              <div className="text-right">
-                {bookingInfo.payment.sst
-                  ? bookingInfo.payment.sst.toFixed(2)
-                  : 0}
+              {totalSST > 0 && (
+                <div className="flex justify-between">
+                  <span>Total SST:</span>
+                  <span>{totalSST.toFixed(2)}</span>
+                </div>
+              )}
+              {totalTTax > 0 && (
+                <div className="flex justify-between">
+                  <span>Total Tourism Tax:</span>
+                  <span>{totalTTax.toFixed(2)}</span>
+                </div>
+              )}
+              {totalDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Total Discount:</span>
+                  <span>-{totalDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              <Separator />
+              <div className="flex justify-between font-bold text-base">
+                <span>Grand Total:</span>
+                <span>RM {grandTotal.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 p-2 border-t text-sm">
-              <div>Tourism Tax</div>
-              <div className="text-right">
-                {bookingInfo.payment.tourismTax
-                  ? bookingInfo.payment.tourismTax.toFixed(2)
-                  : 0}
+              <div className="flex justify-between text-green-600">
+                <span>Amount Paid:</span>
+                <span>RM {totalPaid.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 p-2 border-t text-sm">
-              <div>FnF Discount</div>
-              <div className="text-right text-destructive">
-                -
-                {bookingInfo.payment.discount
-                  ? bookingInfo.payment.discount.toFixed(2)
-                  : 0}
+              <Separator className="h-1 bg-black" />
+              <div className="flex justify-between font-black text-lg text-destructive">
+                <span>Balance Due:</span>
+                <span>RM {totalDue.toFixed(2)}</span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 p-2 border-t text-sm">
-              <div>Advanced Payment</div>
-              <div className="text-right">
-                {bookingInfo.payment.paidAmount
-                  ? bookingInfo.payment.paidAmount.toFixed(2)
-                  : 0}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 p-2 border-t font-semibold">
-              <div>Due Amount</div>
-              <div className="text-right">RM {calculateTotal()}</div>
             </div>
           </div>
 
-          {/* <div className="my-4 grid grid-cols-2 gap-4 p-4 border rounded-lg">
-
-            {bookingInfo.room.roomDetails && (
-              <div className="border-r">
-                <h3 className="font-medium mb-1">Room Details:</h3>
-                <p className="text-sm">{bookingInfo.room.roomDetails}</p>
-              </div>
-            )}
-
-
-            {bookingInfo.room.otherGuest && (
-              <div>
-                <h3 className="font-medium mb-1">Other Guests:</h3>
-                <p className="text-sm">{bookingInfo.room.otherGuest}</p>
-              </div>
-            )}
-          </div> */}
-
-          {/* Terms and Conditions */}
-          <div className="border rounded-lg p-4 text-xs mt-4">
-            <h4 className="font-semibold mb-2">Terms & Conditions</h4>
-            <div className="font-mono">
+          <div className="border rounded-lg p-4 text-[10px] mt-8 bg-muted/10">
+            <h4 className="font-bold mb-2 uppercase border-b w-fit">
+              Terms & Conditions
+            </h4>
+            <div className="grid grid-cols-1 gap-1 font-mono leading-tight">
               <p>
-                <span className="font-semibold">NOTICE TO GUESTS:</span> This
-                property is privately owned and the management reserves the
-                right to refuse service to anyone. Management will not be
-                responsible for accidents or injury to guests or for loss of
-                money, jewellery or valuables of any kind. Management will not
-                be responsible for any item left in the room.
+                • CHECK-OUT TIME: 12:00 PM. Late check-out is subject to room
+                availability and extra charges.
               </p>
-              <p className="my-1">
-                <span className="font-semibold">CHECKOUT TIME:</span> 12:00 PM
-                SELF REGISTRATION ONLY
+              <p>• All guests must present a valid ID/Passport upon arrival.</p>
+              <p>• Smoking is strictly prohibited inside the rooms.</p>
+              <p>
+                • Any damage to hotel property will be charged to the guest.
               </p>
-              <p className="flex flex-col gap-1">
-                <span>
-                  <CircleCheck className="inline-flex w-4 text-green-700" /> I
-                  AGREE that my liability for this bill is not waived and agree
-                  to be held personally liable in the event that the indicated
-                  person or company failed to pay for any part or full amount of
-                  these charges including any missing/damaged items, etc.
-                </span>
-                <span>
-                  <CircleCheck className="inline-flex w-4 text-green-700" /> I
-                  agree that if an attorney is retained to collect these
-                  charges, I will pay all reasonable attorneys fees and costs
-                  incurred.
-                </span>
-                <span>
-                  <CircleCheck className="inline-flex w-4 text-green-700" /> If
-                  payment is by credit card you are authorized to charge my
-                  account for all charges incurred, including any and all
-                  damages/missing items, etc. I agree that the sole purpose of
-                  renting this room is for my own residency only.
-                </span>
+              <p>
+                • I AGREE that my liability for this bill is not waived and I
+                agree to be held personally liable in the event that the
+                indicated person, company or association fails to pay for any
+                part or full amount of these charges.
               </p>
             </div>
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-between border-t text-xs">
-          <div className="text-xs text-muted-foreground">
-            <p>Invoice Date: {format(new Date(), "PPpp")}</p>
-            {/* <p>Thank you for your reservation!</p> */}
-          </div>
-          {/* <Badge variant="outline" className="px-3 py-1">
-            {bookingInfo.paymentDate}
-          </Badge> */}
-          <p className="text-muted-foreground">
-            Thank you for your reservation!
-          </p>
+        <CardFooter className="flex justify-between border-t mt-4 pt-4 text-[10px] text-muted-foreground">
+          <p>Printed Date: {format(new Date(), "PPpp")}</p>
+          <p>Thank you for choosing Eco Hotel!</p>
         </CardFooter>
       </Card>
 
-      <div className="flex justify-end gap-4 mt-6">
-        <Button
-          type="button"
-          onClick={handleConfirmAndPrint}
-          disabled={isPending}
-        >
-          Print Voucher
+      <div className="flex justify-end gap-4 mt-6 print:hidden">
+        <Button onClick={handlePrint} disabled={isPending} className="min-w-36">
+          <Printer className="mr-2 h-4 w-4" /> Print Voucher
         </Button>
       </div>
     </div>

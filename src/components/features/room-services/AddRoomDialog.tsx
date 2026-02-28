@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -18,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/src/components/ui/select";
-import { BedSingle, BedDouble, Crown, Hotel, Plus } from "lucide-react";
+import { BedSingle, BedDouble, Crown, Plus, Hotel, Loader2 } from "lucide-react";
 import { Label } from "@/src/components/ui/label";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
-import { RoomType } from "@/src/types/room.interface";
+import { RoomType } from "@/src/types/enums";
+import { createRoom } from "@/src/services/room.service";
 
 type RoomData = {
   roomNo: string;
@@ -33,7 +34,6 @@ type RoomData = {
 
 export default function AddRoomDialog() {
   const [open, setOpen] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     roomNo: "",
     roomType: RoomType.DQUEEN,
@@ -42,41 +42,30 @@ export default function AddRoomDialog() {
   const queryClient = useQueryClient();
 
   const { mutate: createRoomMutate, isPending } = useMutation({
-    mutationFn: (formData: RoomData) => axios.post("/rooms/create", formData),
+    mutationFn: (data: RoomData) => createRoom(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Room added successfully");
       setFormData({ roomNo: "", roomType: RoomType.DQUEEN, roomFloor: "1" });
       setOpen(false);
     },
-    onError: (error) => {
-      if (axios.isAxiosError(error) && error.response) {
-        toast.error("Failed to add room", {
-          description: error.response.data.message || "Something went wrong",
-        });
-      } else {
-        toast.error("Failed to add room", {
-          description: "An unexpected error occurred",
-        });
-      }
+    onError: (error: any) => {
+      toast.error("Failed to add room", {
+        description: error.message || "Something went wrong",
+      });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // if (!/^\d{3}$/.test(formData.roomNo)) {
-    //   toast.error("Room number must be 3 digits (e.g. 101)");
-    //   return;
-    // }
-
-    createRoomMutate(formData); // ✅ Fire mutation
+    createRoomMutate(formData);
   };
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: value as any,
     }));
   };
 
@@ -104,8 +93,6 @@ export default function AddRoomDialog() {
               onChange={(e) => handleChange("roomNo", e.target.value)}
               placeholder="e.g. 101"
               required
-              // pattern="\d{3}"
-              // title="Room number must be 3 digits (e.g. 101)"
             />
           </div>
 
@@ -122,36 +109,24 @@ export default function AddRoomDialog() {
                   <SelectValue placeholder="Select room type" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(RoomType).map(([key, label]) => {
-                    // Optional: choose icon based on key
+                  {Object.values(RoomType).map((type) => {
                     let Icon;
-                    switch (key) {
-                      case "SDOUBLE":
-                      case "DQUEEN":
-                        Icon = Crown;
-                        break;
-                      case "DTWIN":
-                      case "DFAMILYS":
-                        Icon = BedDouble;
-                        break;
-                      case "DTRIPLE":
-                      case "SKING":
-                        Icon = Hotel;
-                        break;
-                      case "FJUNIOR":
-                      case "DFAMILY":
-                        Icon = BedSingle;
-                        break;
-                      default:
-                        Icon = null;
-                    }
+                    if (type.includes("King")) Icon = Hotel;
+                    else if (type.includes("Queen")) Icon = Crown;
+                    else if (type.includes("Family") || type.includes("Triple")) Icon = BedDouble;
+                    else if (type.includes("Twin")) Icon = BedSingle;
+                    else Icon = BedSingle;
+
                     return (
                       <SelectItem
-                        key={key}
-                        value={label}
+                        key={type}
+                        value={type}
                         className="flex items-center gap-2"
                       >
-                        {Icon && <Icon className="h-4 w-4" />} {label}
+                        <div className="flex items-center gap-2">
+                            {Icon && <Icon className="h-4 w-4" />} 
+                            <span>{type}</span>
+                        </div>
                       </SelectItem>
                     );
                   })}
@@ -193,7 +168,8 @@ export default function AddRoomDialog() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending} className="gap-2">
+              {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {isPending ? "Adding..." : "Add Room"}
             </Button>
           </div>

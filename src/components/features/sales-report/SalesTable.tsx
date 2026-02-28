@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import {
   ColumnDef,
   flexRender,
@@ -36,17 +36,10 @@ import {
   DialogTrigger,
 } from "@/src/components/ui/dialog";
 import { PaymentReceiptDialog } from "./PaymentReceiptDialog";
-import { PAYMENT_METHOD } from "@/src/types/book.interface";
+import { PAYMENT_METHOD } from "@/src/types/enums";
 import { IPayment } from "@/src/types/payment.interface";
 import TableSkeleton from "@/src/shared/TableSkeleton";
-import { getSalesReportPayment } from "@/src/services/payment.service";
-
-interface PaymentData {
-  data: IPayment[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import { getSalesReport } from "@/src/services/payment.service";
 
 const columns: ColumnDef<IPayment>[] = [
   {
@@ -72,9 +65,9 @@ const columns: ColumnDef<IPayment>[] = [
     header: "Payment Method",
   },
   {
-    accessorKey: "paidAmount",
-    header: "Paid Amount",
-    cell: ({ row }) => `RM ${row.getValue("paidAmount")}`,
+    accessorKey: "amount",
+    header: "Amount",
+    cell: ({ row }) => `RM ${row.getValue("amount")}`,
   },
 ];
 
@@ -88,17 +81,15 @@ export function SalesTable() {
   const [selectedPayment, setSelectedPayment] = useState<IPayment | null>(null);
 
   const { data = { data: [], total: 0, page: 1, limit: 10 }, isLoading } =
-    useQuery<PaymentData>({
+    useQuery<any>({
       queryKey: ["payments", page, search, date, paymentMethod],
-      queryFn: () => getSalesReportPayment(page, search, date, paymentMethod),
+      queryFn: () => getSalesReport({ page, search, date: date?.toISOString(), paymentMethod }),
     });
 
   const fetchReportData = async () => {
     if (date) {
-      const { data } = await axios.get("/payments/sales-report", {
-        params: { date: date?.toISOString(), limit: 1000 },
-      });
-      setReportData(data?.data?.data || []);
+      const data = await getSalesReport({ date: date?.toISOString(), limit: 1000 });
+      setReportData(data?.data || []);
       setShowReport(true);
     }
   };
@@ -109,7 +100,7 @@ export function SalesTable() {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
-    pageCount: data ? Math.ceil(data.total / data.limit) : 0,
+    pageCount: data?.meta ? Math.ceil(data.meta.total / data.meta.limit) : 0,
   });
 
   const handleDateSelect = (selectedDate: Date | undefined) => {
@@ -122,6 +113,7 @@ export function SalesTable() {
 
   return (
     <div className="space-y-4">
+      {/* ... filter inputs ... */}
       <div className="flex items-center justify-between">
         <Input
           placeholder="Search by guest name..."
@@ -259,13 +251,13 @@ export function SalesTable() {
           Previous
         </Button>
         <span>
-          Page {data?.page} of {data ? Math.ceil(data.total / data.limit) : 0}
+          Page {data?.meta?.page} of {data?.meta ? Math.ceil(data.meta.total / data.meta.limit) : 0}
         </span>
         <Button
           variant="outline"
           size="sm"
           onClick={() => setPage(page + 1)}
-          disabled={!data || data.page * data.limit >= data.total}
+          disabled={!data?.meta || data.meta.page * data.meta.limit >= data.meta.total}
         >
           Next
         </Button>

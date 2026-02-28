@@ -1,56 +1,51 @@
-import { Types } from "mongoose";
-import { PAYMENT_METHOD } from "./book.interface";
+import { OTAS, PAYMENT_METHOD, PAYMENT_TYPE } from './enums';
 
 export interface IPayment {
   _id?: string;
-  guestId: Types.ObjectId;
+  reservationId?: string;
+  groupId: string;
+  type: PAYMENT_TYPE;
+  amount: number;
+  paymentMethod: PAYMENT_METHOD;
   guestName: string;
-  arrival: Date;
-  departure: Date;
   roomNo: string;
   roomType: string;
-  paymentMethod: PAYMENT_METHOD;
-  paidAmount: number;
-  deposit: number;
   remarks?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-export type TPaymentReceiptInfo = {
-  guest: {
-    name: string | undefined;
-    phone: string | undefined;
-    otas?: string | undefined;
-    refId?: string | undefined;
-  };
-  stay: {
-    arrival: Date | string | undefined;
-    departure: Date | string | undefined;
-  };
-  room: {
-    number: string | undefined;
-    type: string | undefined;
-  };
-  payment: {
-    paidAmount: number;
-    deposit: number;
-    depositMethod?: string | undefined;
-    method: string | undefined;
-    remarks?: string | undefined;
-  };
-  paymentDate: Date | string;
-  paymentId: string | undefined;
-};
 
 export interface IPaymentReceiptProps {
-  bookingInfo: TPaymentReceiptInfo;
-  onConfirmBooking?: () =>
-    | Promise<TPaymentReceiptInfo | void>
-    | TPaymentReceiptInfo
-    | void;
-  isBooking: boolean;
+  bookingInfo: {
+    guest: {
+      name: string;
+      phone: string;
+      otas: string;
+      refId: string;
+    };
+    stay: {
+      arrival: any;
+      departure: any;
+    };
+    room: {
+      number: string;
+      type: string;
+    };
+    payment: {
+      paidAmount: number;
+      deposit?: number;
+      depositMethod?: string;
+      method: string;
+      remarks?: string;
+    };
+    paymentDate: any;
+    paymentId: string;
+  };
+  onConfirmBooking?: () => Promise<any>;
+  isBooking?: boolean;
   printOnly?: boolean;
-  onAfterPrint?: () => Promise<void> | void;
+  onAfterPrint?: () => Promise<void>;
 }
 
+export type TPaymentReceiptInfo = IPaymentReceiptProps["bookingInfo"];

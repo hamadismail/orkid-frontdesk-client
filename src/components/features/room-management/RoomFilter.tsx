@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "../../ui/select";
 import { Badge } from "../../ui/badge";
-import { RoomStatus, RoomType } from "@/src/types/room.interface";
+import { RoomStatus, RoomType } from "@/src/types/enums";
 import { cn } from "@/src/lib/utils";
 
 type RoomFilterProps = {

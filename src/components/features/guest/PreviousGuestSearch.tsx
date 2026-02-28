@@ -1,19 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
 import { Loader2, Search, Phone, Mail } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
-import { IBook } from "@/src/types/book.interface";
+import { IGuest } from "@/src/types/guest.interface";
+import { getAllGuests } from "@/src/services/guest.service";
 
 type PreviousGuestSearchProps = {
   value: string;
   onValueChange: (value: string) => void;
-  onGuestSelect: (guest: IBook) => void;
-  selectedGuest?: IBook | null;
-  onSelectedGuestChange?: (guest: IBook | null) => void;
+  onGuestSelect: (guest: IGuest) => void;
+  selectedGuest?: IGuest | null;
+  onSelectedGuestChange?: (guest: IGuest | null) => void;
   label?: string;
   placeholder?: string;
 };
@@ -38,21 +39,26 @@ export function PreviousGuestSearch({
     return () => clearTimeout(timer);
   }, [value]);
 
-  const { data: guestSuggestions = [], isLoading: isLoadingGuests } = useQuery<
-    IBook[]
-  >({
+  const { data, isLoading: isLoadingGuests } = useQuery({
     queryKey: ["guest-search", guestSearch],
     queryFn: async () => {
       if (!guestSearch || guestSearch.length < 2) return [];
-      const response = await axios.get(`/guests?search=${guestSearch}`);
-      return response.data.data?.guests || [];
+      return await getAllGuests({ search: guestSearch });
     },
     enabled: guestSearch.length >= 2,
   });
 
-  const handleGuestSelect = (guest: IBook) => {
+  const guestSuggestions = useMemo(() => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if ((data as any).data && Array.isArray((data as any).data))
+      return (data as any).data;
+    return [];
+  }, [data]);
+
+  const handleGuestSelect = (guest: IGuest) => {
     onSelectedGuestChange?.(guest);
-    onValueChange(guest.guest.name);
+    onValueChange(guest.name);
     onGuestSelect(guest);
     setShowGuestDropdown(false);
   };
@@ -71,7 +77,7 @@ export function PreviousGuestSearch({
             const nextValue = e.target.value;
             onValueChange(nextValue);
             setShowGuestDropdown(nextValue.length >= 2);
-            if (selectedGuest && nextValue !== selectedGuest.guest.name) {
+            if (selectedGuest && nextValue !== selectedGuest.name) {
               onSelectedGuestChange?.(null);
             }
           }}
@@ -91,21 +97,22 @@ export function PreviousGuestSearch({
                 <div className="border-b bg-muted px-3 py-2 text-xs text-muted-foreground">
                   Previous guests ({guestSuggestions.length})
                 </div>
-                {guestSuggestions.map((guest) => (
+                {guestSuggestions.map((guest: any) => (
                   <button
                     key={guest._id}
                     onClick={() => handleGuestSelect(guest)}
+                    type="button"
                     className="w-full border-b px-3 py-2 text-left transition-colors last:border-b-0 hover:bg-muted"
                   >
-                    <div className="font-medium">{guest.guest.name}</div>
+                    <div className="font-medium">{guest.name}</div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Phone className="h-3 w-3" />
-                      {guest.guest.phone}
-                      {guest.guest.email && (
+                      {guest.phone}
+                      {guest.email && (
                         <>
                           <span>•</span>
                           <Mail className="h-3 w-3" />
-                          {guest.guest.email}
+                          {guest.email}
                         </>
                       )}
                     </div>

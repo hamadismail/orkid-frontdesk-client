@@ -1,7 +1,7 @@
 import { Circle } from "lucide-react";
 import React from "react";
 import { Badge } from "../../ui/badge";
-import { RoomStatus } from "../../../types/room.interface";
+import { RoomStatus } from "../../../types/enums";
 
 type RoomBadgeProps = {
   roomStatus: RoomStatus;
@@ -30,8 +30,12 @@ export default function RoomBadge({ roomStatus }: RoomBadgeProps) {
       text: "DIRTY",
     },
     [RoomStatus.SERVICE]: {
-      className: "bg-red-100 text-red-800 border-red-300",
-      text: "OCCUPIED",
+      className: "bg-purple-100 text-purple-800 border-purple-300",
+      text: "SERVICE",
+    },
+    [RoomStatus.OUT_OF_ORDER]: {
+        className: "bg-gray-800 text-white",
+        text: "OUT OF ORDER",
     },
   };
 

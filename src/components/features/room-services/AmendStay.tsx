@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -8,26 +9,27 @@ import {
   DialogTitle,
   DialogFooter,
   DialogTrigger,
+  DialogDescription,
 } from "@/src/components/ui/dialog";
 import { Button } from "@/src/components/ui/button";
 import { Calendar } from "@/src/components/ui/calendar";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { toast } from "sonner";
 import { IReservation } from "@/src/types/reservation.interface";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
 import { cn } from "@/src/lib/utils";
+import { amendStay } from "@/src/services/reservation.service";
 
 interface AmendStayProps {
   reservation: IReservation;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export default function AmendStay({ reservation, onClose }: AmendStayProps) {
@@ -40,19 +42,15 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
 
   const { mutate: amendStayMutation, isPending } = useMutation({
     mutationFn: async (newDates: { arrival: Date; departure: Date }) => {
-      const res = await axios.patch(`/reserve`, {
-        reservationId: reservation._id,
-        ...newDates,
-      });
-      return res.data;
+      return await amendStay(reservation._id!, newDates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reserve"] });
+      queryClient.invalidateQueries({ queryKey: ["reservations"] });
       toast.success("Stay amended successfully!");
       setOpen(false);
-      onClose();
+      onClose?.();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("Failed to amend stay", {
         description: error.message || "Something went wrong",
       });
@@ -68,21 +66,24 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Amend Stay</Button>
+        <Button variant="outline">Amend Stay</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Amend Stay</DialogTitle>
+          <DialogTitle>Amend Stay Dates</DialogTitle>
+          <DialogDescription>
+            Change the arrival and departure dates for this reservation.
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-center">
-        <div className={cn("grid gap-2")}>
-              <Popover>
+        <div className="flex flex-col gap-4 py-4">
+            <div className="text-sm font-medium">Current Stay: {format(new Date(reservation.stay.arrival), "PP")} - {format(new Date(reservation.stay.departure), "PP")}</div>
+            <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     id="date"
                     variant={"outline"}
                     className={cn(
-                      "w-75 justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal",
                       !date && "text-muted-foreground"
                     )}
                   >
@@ -97,7 +98,7 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
                         format(date.from, "LLL dd, y")
                       )
                     ) : (
-                      <span>Pick a date</span>
+                      <span>Pick new dates</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -109,17 +110,18 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
                     selected={date}
                     onSelect={setDate}
                     numberOfMonths={2}
+                    disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
                   />
                 </PopoverContent>
-              </Popover>
-            </div>
+            </Popover>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving..." : "Save"}
+          <Button onClick={handleSave} disabled={isPending || !date?.to}>
+            {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Update Stay
           </Button>
         </DialogFooter>
       </DialogContent>

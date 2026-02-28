@@ -67,7 +67,7 @@ export const RecentPaymentsTable = ({
                 </span>
               </TableCell>
               <TableCell className="text-right font-semibold">
-                RM {formatCurrency(payment.paidAmount)}
+                RM {formatCurrency(payment.amount)}
               </TableCell>
             </TableRow>
           ))

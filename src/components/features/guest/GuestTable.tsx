@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Table,
@@ -10,13 +11,6 @@ import {
   TableRow,
 } from "@/src/components/ui/table";
 import { Input } from "@/src/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/src/components/ui/select";
 import { Button } from "@/src/components/ui/button";
 import {
   ChevronLeft,
@@ -24,137 +18,101 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Search,
-  Filter,
-  ArrowDownUp,
+  Printer,
+  ChevronDown,
 } from "lucide-react";
-import { format } from "date-fns";
-import { Badge } from "@/src/components/ui/badge";
 import { GuestDetailsDialog } from "@/src/shared/GuestDetailsDialog";
-import { useReactToPrint } from "react-to-print";
-import PrintableTable from "@/src/shared/DepositReceipt";
-import { IBook, OTAS } from "@/src/types/book.interface";
+import { IGuest } from "@/src/types/guest.interface";
+import { IReservation } from "@/src/types/reservation.interface";
+import { RESERVATION_STATUS } from "@/src/types/enums";
 import TableSkeleton from "@/src/shared/TableSkeleton";
-import { PrintInvoiceButton } from "./PrintInvoiceButton";
-import axios from "axios";
-import { getAllGuests } from "@/src/services/booking.service";
+import { getAllReservations } from "@/src/services/reservation.service";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
+import { GuestInvoice } from "@/src/shared/GuestInvoice";
+import { useReactToPrint } from "react-to-print";
+import { Badge } from "@/src/components/ui/badge";
+import { format } from "date-fns";
+import React from "react";
 
 export default function GuestTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [otaFilter, setOtaFilter] = useState<string>("all");
-  const [date, setDate] = useState<Date>();
-  const [sortBy, setSortBy] = useState("createdAt");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [selectedGuest, setSelectedGuest] = useState<IBook | null>(null);
+  const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [depositsForPrinting, setDepositsForPrinting] = useState<
-    IBook[] | undefined
-  >([]);
-  const [isPrinting, setIsPrinting] = useState(false);
-  const [isPrintingLoading, setIsPrintingLoading] = useState(false);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [reservationForInvoice, setReservationForInvoice] = useState<any>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: [
-      "guests",
-      page,
-      search,
-      statusFilter,
-      otaFilter,
-      date,
-      sortBy,
-      sortOrder,
-    ],
-    queryFn: () =>
-      getAllGuests(
-        page,
-        search,
-        statusFilter,
-        otaFilter,
-        date?.toISOString(),
-        sortBy,
-        sortOrder,
-      ),
+    queryKey: ["reservations-guest-view", page, search],
+    queryFn: () => getAllReservations({ page, search }),
   });
 
-  const allGuests = useMemo(() => data || [], [data]);
+  const allReservations = useMemo(() => {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (data.data && Array.isArray(data.data)) return data.data;
+    if (data.data && data.data.data && Array.isArray(data.data.data))
+      return data.data.data;
+    return [];
+  }, [data]);
 
-  const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortOrder("desc");
-    }
+  // Group reservations by groupId
+  const groupedReservations = useMemo(() => {
+    const groups: Record<string, IReservation[]> = {};
+    if (!Array.isArray(allReservations)) return groups;
+
+    allReservations.forEach((res: any) => {
+      const groupId =
+        typeof res.groupId === "object" ? res.groupId._id : res.groupId;
+      if (!groups[groupId]) groups[groupId] = [];
+      groups[groupId].push(res);
+    });
+    return groups;
+  }, [allReservations]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
-  const handleViewGuest = (guest: IBook) => {
-    setSelectedGuest(guest);
+  const meta = data?.meta || { page: 1, total: 0, limit: 10 };
+  const totalPages = Math.ceil(meta.total / meta.limit);
+
+  const handleViewGuest = (res: IReservation) => {
+    setSelectedGuest(res);
     setIsDialogOpen(true);
   };
 
-  const statusColors = {
-    CheckedIn: "bg-green-100 text-green-800 border-green-300",
-    CheckedOut: "bg-blue-100 text-blue-800 border-blue-300",
-    Reserved: "bg-amber-100 text-amber-800 border-amber-300",
-    Cancel: "bg-red-100 text-red-800 border-red-300",
+  const handlePrintClick = (e: React.MouseEvent, res: any) => {
+    e.stopPropagation();
+    setReservationForInvoice(res);
+    setIsInvoiceDialogOpen(true);
   };
+
+  const invoiceRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
-    contentRef,
-    onAfterPrint: () => setIsPrinting(false),
-    pageStyle: `
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact;
-        }
-        @page {
-          margin: 0;
-          padding: 1cm;
-          size: auto;
-        }
-        @page :footer { display: none; }
-        @page :header { display: none; }
-      }
-    `,
+    contentRef: invoiceRef,
   });
-
-  const triggerPrint = async () => {
-    setIsPrintingLoading(true);
-    try {
-      const res = await axios.get("/deposits");
-      setDepositsForPrinting(res.data.data?.guests);
-      setIsPrinting(true);
-    } catch (error) {
-      console.error("Error fetching deposits for printing:", error);
-    } finally {
-      setIsPrintingLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isPrinting) {
-      handlePrint();
-    }
-  }, [isPrinting, handlePrint]);
 
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Guest Management</h1>
+        <h1 className="text-2xl font-bold">Stays & Guest List</h1>
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Search Guests */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <Input
-            placeholder="Search guests..."
+            placeholder="Search by guest name, phone, or reservation..."
             className="pl-9"
             value={search}
             onChange={(e) => {
@@ -163,241 +121,247 @@ export default function GuestTable() {
             }}
           />
         </div>
-
-        {/* Filter Guest */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-4 w-4 text-gray-500" />
-
-          {/* Filter By Status */}
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => {
-              setStatusFilter(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-45">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="CheckedIn">Checked In</SelectItem>
-              <SelectItem value="CheckedOut">Checked Out</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Filter By OTAs */}
-          <Select
-            value={otaFilter}
-            onValueChange={(value) => {
-              setOtaFilter(value);
-              setPage(1);
-            }}
-          >
-            <SelectTrigger className="w-45">
-              <SelectValue placeholder="Filter by OTA" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All OTAs</SelectItem>
-              {Object.values(OTAS).map((ota) => (
-                <SelectItem key={ota.toLowerCase()} value={ota}>
-                  {ota}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Filter By Date */}
-          <Input
-            type="date"
-            className="w-45"
-            value={date ? format(date, "yyyy-MM-dd") : ""}
-            onChange={(e) => {
-              setDate(e.target.value ? new Date(e.target.value) : undefined);
-              setPage(1);
-            }}
-          />
-        </div>
-
-        {/* Print Button */}
-
-        {isClient && (
-          <Button
-            className="cursor-pointer"
-            onClick={triggerPrint}
-            disabled={isPrintingLoading}
-          >
-            {isPrintingLoading ? "Preparing..." : "Deposit Report"}
-          </Button>
-        )}
       </div>
 
-      <div className="rounded-md border">
-        {isClient && (
-          <div style={{ display: "none" }}>
-            <PrintableTable ref={contentRef} deposits={depositsForPrinting} />
-          </div>
-        )}
+      <div className="rounded-md border p-1">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Deposit</TableHead>
-              <TableHead>Room No</TableHead>
+              <TableHead className="w-12"></TableHead>
+              <TableHead>Guest Name</TableHead>
+              <TableHead>Stay Duration</TableHead>
+              <TableHead>Rooms</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead
-                className="cursor-pointer"
-                onClick={() => handleSort("createdAt")}
-              >
-                <div className="flex items-center gap-2">
-                  CheckedIn
-                  {sortBy === "createdAt" && <ArrowDownUp className="h-4 w-4" />}
-                </div>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer"
-                onClick={() => handleSort("updatedAt")}
-              >
-                <div className="flex items-center gap-2">
-                  CheckedOut
-                  {sortBy === "updatedAt" && <ArrowDownUp className="h-4 w-4" />}
-                </div>
-              </TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
 
           <TableBody>
             {isLoading ? (
-              <TableSkeleton
-                rows={10}
-                columns={7}
-                widths={[
-                  "w-[100px]",
-                  "w-[100px]",
-                  "w-[100px]",
-                  "w-[100px]",
-                  "w-[120px]",
-                  "w-[120px]",
-                  "w-[50px]",
-                ]}
-              />
+              <TableSkeleton rows={10} columns={6} />
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-red-500">
-                  Failed to load guests
+                <TableCell colSpan={6} className="text-center text-red-500">
+                  Error loading data
                 </TableCell>
               </TableRow>
-            ) : allGuests?.guests?.length === 0 ? (
+            ) : Object.keys(groupedReservations).length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center">
-                  No guests found
+                <TableCell colSpan={6} className="text-center">
+                  No stays found
                 </TableCell>
               </TableRow>
             ) : (
-              allGuests?.guests?.map((guest: IBook) => (
-                <TableRow key={guest._id}>
-                  <TableCell
-                    onClick={() => handleViewGuest(guest)}
-                    className="font-medium cursor-pointer"
-                  >
-                    {guest.guest.name.length >= 15
-                      ? guest.guest.name.slice(0, 15) + "..."
-                      : guest.guest.name}
-                  </TableCell>
+              Object.entries(groupedReservations).map(
+                ([groupId, reservations]) => {
+                  const guest = (reservations[0] as any).guestId as IGuest;
+                  const isExpanded = expandedGroups[groupId];
+                  const isSingle = reservations.length === 1;
 
-                  <TableCell>{guest.payment.deposit || "-"}</TableCell>
-                  <TableCell>
-                    {(guest.roomId as { roomNo: string })?.roomNo}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={`capitalize ${
-                        statusColors[
-                          guest.isCheckOut ? "CheckedOut" : "CheckedIn"
-                        ] || "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {guest.isCheckOut ? "CheckedOut" : "CheckedIn"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {guest.createdAt
-                      ? format(
-                          new Date(guest.createdAt),
-                          "MMM dd, yyyy, hh:mm a"
-                        )
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {guest.isCheckOut && guest.updatedAt ? format(
-                          new Date(guest.updatedAt),
-                          "MMM dd, yyyy, hh:mm a"
-                        )
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <PrintInvoiceButton guest={guest} />
-                  </TableCell>
-                </TableRow>
-              ))
+                  return (
+                    <React.Fragment key={groupId}>
+                      <TableRow
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() =>
+                          isSingle
+                            ? handleViewGuest(reservations[0])
+                            : toggleGroup(groupId)
+                        }
+                      >
+                        <TableCell>
+                          {!isSingle &&
+                            (isExpanded ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            ))}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-bold">{guest?.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {guest?.phone}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {format(
+                              new Date(reservations[0].stay.arrival),
+                              "MMM d",
+                            )}{" "}
+                            -{" "}
+                            {format(
+                              new Date(reservations[0].stay.departure),
+                              "MMM d, yyyy",
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {reservations.length} Room
+                            {reservations.length > 1 ? "s" : ""}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              reservations[0].status ===
+                              RESERVATION_STATUS.CHECKED_IN
+                                ? "destructive"
+                                : "outline"
+                            }
+                          >
+                            {reservations[0].status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div
+                            className="flex justify-end gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) =>
+                                handlePrintClick(
+                                  e,
+                                  isSingle ? reservations[0] : reservations,
+                                )
+                              }
+                              title="Print Invoice"
+                            >
+                              <Printer className="h-4 w-4 text-blue-600" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      {!isSingle &&
+                        isExpanded &&
+                        reservations.map((res) => (
+                          <TableRow
+                            key={res._id}
+                            className="bg-muted/30 hover:bg-muted/50 border-l-4 border-l-primary"
+                            onClick={() => handleViewGuest(res)}
+                          >
+                            <TableCell></TableCell>
+                            <TableCell className="pl-8 text-xs">
+                              <div className="font-medium text-muted-foreground">
+                                Confirmation: {res.confirmationNo}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              {format(new Date(res.stay.arrival), "PP")} -{" "}
+                              {format(new Date(res.stay.departure), "PP")}
+                            </TableCell>
+                            <TableCell className="text-xs font-bold">
+                              Room {(res.roomId as any)?.roomNo} (
+                              {(res.roomId as any)?.roomType})
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] h-5"
+                              >
+                                {res.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => handlePrintClick(e, res)}
+                              >
+                                <Printer className="h-3 w-3 mr-1" /> Invoice
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </React.Fragment>
+                  );
+                },
+              )
             )}
           </TableBody>
         </Table>
       </div>
 
-      {/* pagination */}
       <div className="flex items-center justify-between px-2">
         <div className="text-sm text-muted-foreground">
-          Page {page} of {allGuests?.totalPages || 1}
+          Page {page} of {totalPages || 1}
         </div>
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setPage(1)}
-            disabled={page === 1 || isLoading}
+            disabled={page === 1}
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1 || isLoading}
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              setPage(Math.min(allGuests?.totalPages || 1, page + 1))
-            }
-            disabled={
-              page === allGuests?.totalPages || isLoading || !allGuests?.hasMore
-            }
+            onClick={() => setPage(page + 1)}
+            disabled={page >= totalPages}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPage(allGuests?.totalPages || 1)}
-            disabled={
-              page === allGuests?.totalPages || isLoading || !allGuests?.hasMore
-            }
+            onClick={() => setPage(totalPages)}
+            disabled={page >= totalPages}
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      <GuestDetailsDialog
-        isDialogOpen={isDialogOpen}
-        setIsDialogOpen={setIsDialogOpen}
-        selectedGuest={selectedGuest}
-      />
+      {/* Guest Details Dialog */}
+      {selectedGuest && (
+        <GuestDetailsDialog
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
+          selectedGuest={selectedGuest}
+        />
+      )}
+
+      {/* Print Invoice Dialog */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="min-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Guest Invoice</DialogTitle>
+            <DialogDescription>
+              Invoice for{" "}
+              {Array.isArray(reservationForInvoice)
+                ? (reservationForInvoice[0].guestId as any)?.name
+                : (reservationForInvoice?.guestId as any)?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <GuestInvoice ref={invoiceRef} guest={reservationForInvoice} />
+          </div>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsInvoiceDialogOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={() => handlePrint()}>
+              <Printer className="mr-2 h-4 w-4" /> Print Invoice
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

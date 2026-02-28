@@ -1,38 +1,43 @@
-import { OTAS, PAYMENT_METHOD } from "./book.interface";
+import { OTAS, RESERVATION_STATUS } from './enums';
+import { IGuest } from './guest.interface';
+import { IRoom } from './room.interface';
+import { IReservationGroup } from './group.interface';
 
 export interface IReservation {
   _id?: string;
-  guest: {
-    name: string;
-    email: string;
-    phone: string;
-    country: string;
-    passport: string;
-    refId: string; // Used as reservationNo
-    otas: OTAS;
-    // status: GUEST_STATUS;
-  };
+  confirmationNo: string;
+  groupId: string | IReservationGroup;
+  guestId: string | IGuest;
+  roomId: string | IRoom;
+  status: RESERVATION_STATUS;
   stay: {
-    arrival: Date;
-    departure: Date;
-    adults?: number;
-    children?: number;
+    arrival: string | Date;
+    departure: string | Date;
+    adults: number;
+    children: number;
   };
-  payment: {
+  rate: {
     roomPrice: number;
-    subtotal: number;
     sst?: number;
     tourismTax?: number;
     discount?: number;
-    paidAmount: number; // Used as advancePayment
-    dueAmount: number;
-    paymentMethod: PAYMENT_METHOD;
-    // deposit?: number;
-    // depositMethod?: DEPOSIT_METHOD;
-    remarks: string;
+    subtotal: number;
   };
-  roomId?: string | { _id: string; roomNo: string; roomType: string };
-  createdAt?: Date;
-  updatedAt?: Date;
-  isDeleted?: boolean;
+  payment: {
+    paidAmount: number;
+    dueAmount: number;
+    deposit?: number;
+    depositMethod?: string;
+    paymentMethod?: string;
+    remarks?: string;
+  };
+  source?: OTAS;
+  refId?: string;
+  cancelledAt?: string | Date;
+  cancelReason?: string;
+  checkedInAt?: string | Date;
+  checkedOutAt?: string | Date;
+  movedFromRoomId?: string | IRoom;
+  createdAt?: string;
+  updatedAt?: string;
 }
