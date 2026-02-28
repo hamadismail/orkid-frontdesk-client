@@ -51,8 +51,11 @@ export default function PaymentModal({ guest }: { guest: IReservation }) {
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
+      queryClient.invalidateQueries({ queryKey: ["reservations-payment"] });
       toast.success("Payment recorded successfully");
       setOpen(false);
+      setAmount("");
+      setRemarks("");
     },
     onError: (error: any) => {
       toast.error("Payment failed", { description: error.message });

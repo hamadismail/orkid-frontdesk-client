@@ -54,7 +54,7 @@ export function PaymentInvoice({
         remarks: rawData.remarks || rawData.payment?.remarks || "",
       },
       paymentDate: rawData.createdAt || rawData.paymentDate || new Date(),
-      paymentId: res.confirmationNo || rawData._id || "N/A",
+      paymentId: rawData._id?.toString().toUpperCase() || "N/A",
     };
   })();
 
