@@ -48,6 +48,8 @@ export default function RoomCard({
               "bg-orange-100 border-orange-400 dark:bg-orange-950 dark:border-orange-800",
             roomStatus === RoomStatus.OCCUPIED &&
               "bg-red-100 border-red-400 dark:bg-red-950 dark:border-red-800",
+            roomStatus === RoomStatus.SERVICE &&
+              "bg-purple-100 border-purple-400 dark:bg-purple-950 dark:border-purple-800",
           )}
         >
           {/* Card Heading */}
@@ -60,7 +62,7 @@ export default function RoomCard({
           </div>
 
           {/* Card Body */}
-          <div className="flex flex-col text-sm gap-2 my-2">
+          <div className="flex flex-col text-sm gap-2">
             {room.roomStatus === RoomStatus.SERVICE && (
               <div className="font-bold text-purple-600">Service Request</div>
             )}
@@ -79,7 +81,7 @@ export default function RoomCard({
                 </div>
             )} */}
 
-            <div className="space-y-1">
+            <div>
               <div className="flex items-center gap-1 text-muted-foreground">
                 <Home className="h-4 w-4" />
                 <span>Floor {room.roomFloor}</span>

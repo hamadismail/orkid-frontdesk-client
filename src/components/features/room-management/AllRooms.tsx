@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Hotel } from "lucide-react";
 import RoomCard from "@/src/components/features/room-management/RoomCard";
 import RoomFilter from "@/src/components/features/room-management/RoomFilter";
@@ -16,18 +16,10 @@ import { getAllReservations } from "@/src/services/reservation.service";
 import AddRoomDialog from "../room-services/AddRoomDialog";
 
 import { isSameDay, startOfDay } from "date-fns";
+import DateTimeClock from "@/src/shared/DateTimeClock";
 
 function AllRooms() {
-  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [floorFilter, setFloorFilter] = useState("all");
-
-  useEffect(() => {
-    setCurrentTime(new Date());
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   const [typeFilter, setTypeFilter] = useState<RoomType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "all">("all");
@@ -88,21 +80,24 @@ function AllRooms() {
     // 1. Check if there's a reservation arriving on the selected date
     const arrivalRes = allReservations.find((r: IReservation) => {
       const resRoomId = typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-      const roomId = typeof room._id === "object" ? (room._id as any).toString() : room._id;
+      const roomId =
+        typeof room._id === "object" ? (room._id as any).toString() : room._id;
 
       if (resRoomId?.toString() !== roomId?.toString()) return false;
 
       const arrival = startOfDay(new Date(r.stay.arrival));
       return (
-        [RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.RESERVED].includes(r.status) &&
-        isSameDay(arrival, selectedDate)
+        [RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.RESERVED].includes(
+          r.status,
+        ) && isSameDay(arrival, selectedDate)
       );
     });
 
     // 2. Find the current stay (for name display on occupied rooms)
     const currentRes = allReservations.find((r: IReservation) => {
       const resRoomId = typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-      const roomId = typeof room._id === "object" ? (room._id as any).toString() : room._id;
+      const roomId =
+        typeof room._id === "object" ? (room._id as any).toString() : room._id;
 
       return (
         resRoomId?.toString() === roomId?.toString() &&
@@ -133,7 +128,9 @@ function AllRooms() {
           <Hotel className="h-8 w-8 text-primary" />
           <h2 className="text-2xl font-bold">Room Management</h2>
         </div>
+
         {/* ... time display ... */}
+        <DateTimeClock />
         <AddRoomDialog />
       </div>
 
