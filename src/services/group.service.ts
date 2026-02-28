@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { API_BASE_URL } from '../lib/config';
 
 export const getAllGroups = async (params?: any) => {
@@ -18,7 +19,13 @@ export const createGroup = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include',
   });
+
   const result = await res.json();
+
+  if (!res.ok) {
+    throw new Error(result.message || 'Group reservation failed');
+  }
+
   return result.data;
 };
 

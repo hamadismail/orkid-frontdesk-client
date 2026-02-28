@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +21,11 @@ import {
 import { IReservation } from "@/src/types/reservation.interface";
 import { IGuest } from "@/src/types/guest.interface";
 import { createGroup } from "@/src/services/group.service";
-import { createReservation } from "@/src/services/reservation.service";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  createReservation,
+  checkInReservation,
+} from "@/src/services/reservation.service";
+import { Plus, Trash2, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import z from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -81,11 +84,13 @@ import { Label } from "../../ui/label";
 import { getAllRooms } from "@/src/services/room.service";
 import { PreviousGuestSearch } from "../guest/PreviousGuestSearch";
 
-interface NewReservationDialogProps {
+interface ReservationDialogProps {
   allReservations: IReservation[];
   isOpen: boolean;
   onClose: () => void;
   room?: IRoom;
+  mode?: "reserve" | "checkin";
+  existingReservation?: IReservation;
 }
 
 const STEPS = [
@@ -95,11 +100,13 @@ const STEPS = [
   { number: 4, title: "Confirmation", icon: CheckCircle },
 ] as const;
 
-export function NewReservationDialog({
+export function ReservationDialog({
   isOpen,
   onClose,
   room,
-}: NewReservationDialogProps) {
+  mode = "reserve",
+  existingReservation,
+}: ReservationDialogProps) {
   const [step, setStep] = useState(1);
   const [isGroup, setIsGroup] = useState(false);
   const [reservationData, setReservationData] = useState<any>(null);
@@ -122,21 +129,28 @@ export function NewReservationDialog({
       phone: "",
       email: "",
       passport: "",
+      country: "",
       arrivalDate: new Date(),
       departureDate: addDays(new Date(), 1),
-      rooms: room ? [{
-        roomType: room.roomType,
-        roomNo: room.roomNo,
-        roomPrice: "0",
-        adults: 1,
-        children: 0,
-      }] : [{
-        roomType: "" as any,
-        roomNo: "",
-        roomPrice: "0",
-        adults: 1,
-        children: 0,
-      }],
+      rooms: room
+        ? [
+            {
+              roomType: room.roomType,
+              roomNo: room.roomNo,
+              roomPrice: "0",
+              adults: 1,
+              children: 0,
+            },
+          ]
+        : [
+            {
+              roomType: "" as any,
+              roomNo: "",
+              roomPrice: "0",
+              adults: 1,
+              children: 0,
+            },
+          ],
       roomPrice: "0",
       paidAmount: "",
       paymentMethod: PAYMENT_METHOD.CASH,
@@ -146,6 +160,106 @@ export function NewReservationDialog({
       remarks: "",
     },
   });
+
+  const handleReset = useCallback(() => {
+    form.reset({
+      isGroup: false,
+      groupName: "",
+      refId: "",
+      source: OTAS.WALKING_GUEST,
+      name: "",
+      phone: "",
+      email: "",
+      passport: "",
+      country: "",
+      arrivalDate: new Date(),
+      departureDate: addDays(new Date(), 1),
+      rooms: room
+        ? [
+            {
+              roomType: room.roomType,
+              roomNo: room.roomNo,
+              roomPrice: "0",
+              adults: 1,
+              children: 0,
+            },
+          ]
+        : [
+            {
+              roomType: "" as any,
+              roomNo: "",
+              roomPrice: "0",
+              adults: 1,
+              children: 0,
+            },
+          ],
+      roomPrice: "0",
+      paidAmount: "",
+      paymentMethod: PAYMENT_METHOD.CASH,
+      sst: "",
+      tourismTax: "",
+      discount: "",
+      remarks: "",
+    });
+    setStep(1);
+    setSelectedGuest(null);
+    setReservationData(null);
+    setIsGroup(false);
+  }, [form, room]);
+
+  // Effect to pre-fill from existing reservation
+  useEffect(() => {
+    if (existingReservation && isOpen) {
+      const guest = existingReservation.guestId as unknown as IGuest;
+      const resRoom =
+        typeof existingReservation.roomId === "object"
+          ? existingReservation.roomId
+          : room && room._id === existingReservation.roomId
+            ? room
+            : null;
+
+      form.reset({
+        isGroup:
+          !!existingReservation.groupId &&
+          (existingReservation.groupId as any).groupName !== "Single Booking",
+        groupName: (existingReservation.groupId as any)?.groupName || "",
+        name: guest?.name || "",
+        phone: guest?.phone || "",
+        email: guest?.email || "",
+        passport: guest?.passport || "",
+        country: guest?.country || "",
+        source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
+        refId: existingReservation.confirmationNo,
+        arrivalDate: new Date(existingReservation.stay.arrival),
+        departureDate: new Date(existingReservation.stay.departure),
+        rooms: [
+          {
+            roomType: (resRoom as any)?.roomType || room?.roomType || "",
+            roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
+            roomPrice: existingReservation.rate.roomPrice.toString(),
+            adults: existingReservation.stay.adults,
+            children: existingReservation.stay.children,
+          },
+        ],
+        paidAmount: existingReservation.payment.paidAmount.toString(),
+        paymentMethod:
+          (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
+          PAYMENT_METHOD.CASH,
+        remarks: existingReservation.payment.remarks || "",
+        sst: existingReservation.rate.sst?.toString() || "",
+        tourismTax: existingReservation.rate.tourismTax?.toString() || "",
+        discount: existingReservation.rate.discount?.toString() || "",
+      });
+      setSelectedGuest(guest);
+      setIsGroup(
+        !!existingReservation.groupId &&
+          (existingReservation.groupId as any).groupName !== "Single Booking",
+      );
+    } else if (!existingReservation && isOpen) {
+      // Reset to default for new reservation when dialog opens
+      handleReset();
+    }
+  }, [existingReservation, isOpen, room, form, handleReset]);
 
   // 2. Field Array
   const { fields, append, remove } = useFieldArray({
@@ -169,9 +283,34 @@ export function NewReservationDialog({
     return Math.max(1, differenceInCalendarDays(departureDate, arrivalDate));
   }, [arrivalDate, departureDate]);
 
+  const calculateTotalAmount = useCallback(() => {
+    const rooms = form.watch("rooms") || [];
+    const totalRoomPrice = rooms.reduce(
+        (acc, r) => acc + (parseFloat(r.roomPrice || "0") || 0) * stayDuration,
+        0,
+      );
+    const sst = parseFloat(form.watch("sst") || "0") || 0;
+    const tourismTax = parseFloat(form.watch("tourismTax") || "0") || 0;
+
+    const subtotal = totalRoomPrice + sst + tourismTax;
+
+    return subtotal.toFixed(2);
+  }, [form, stayDuration]);
+
+  const calculateDueAmount = useCallback(() => {
+    const totalAmount = parseFloat(calculateTotalAmount()) || 0;
+    const paidAmount = parseFloat(form.watch("paidAmount") || "0") || 0;
+    const discount = parseFloat(form.watch("discount") || "0") || 0;
+
+    const dueAmount = totalAmount - paidAmount - discount;
+    return dueAmount.toFixed(2);
+  }, [calculateTotalAmount, form]);
+
   const paymentInvoiceData = useMemo(() => {
     if (!reservationData) return null;
-    const res = reservationData.reservations ? reservationData.reservations[0] : reservationData;
+    const res = reservationData.reservations
+      ? reservationData.reservations[0]
+      : reservationData;
     const guest = res.guestId as unknown as IGuest;
     const room = res.roomId as any;
 
@@ -201,19 +340,41 @@ export function NewReservationDialog({
     };
   }, [reservationData]);
 
-
-  const { mutate: reserveRoom, isPending } = useMutation({
+  const { mutate: processReservation, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {
+      // If we are checking in an EXISTING reservation
+      if (mode === "checkin" && existingReservation?._id) {
+        const response = await checkInReservation(existingReservation._id);
+        if (response) {
+          setReservationData(response);
+          return response;
+        }
+        throw new Error("Check-in failed");
+      }
+
       const guestData = selectedGuest?._id
-        ? { guestId: selectedGuest._id }
-        : { guest: { name: data.name, phone: data.phone, email: data.email, passport: data.passport, country: data.country } };
+        ? { primaryGuestId: selectedGuest._id, guestId: selectedGuest._id }
+        : {
+            guest: {
+              name: data.name,
+              phone: data.phone,
+              email: data.email,
+              passport: data.passport,
+              country: data.country,
+            },
+          };
+
+      const status =
+        mode === "checkin"
+          ? RESERVATION_STATUS.CHECKED_IN
+          : RESERVATION_STATUS.CONFIRMED;
 
       if (data.isGroup) {
         // Handle Group Reservation
-        const sstValue = parseFloat(data.sst || "0");
-        const tourismTaxValue = parseFloat(data.tourismTax || "0");
-        const discountValue = parseFloat(data.discount || "0");
-        const paidAmountValue = parseFloat(data.paidAmount || "0");
+        const sstValue = parseFloat(data.sst || "0") || 0;
+        const tourismTaxValue = parseFloat(data.tourismTax || "0") || 0;
+        const discountValue = parseFloat(data.discount || "0") || 0;
+        const paidAmountValue = parseFloat(data.paidAmount || "0") || 0;
 
         const payload = {
           groupData: {
@@ -221,25 +382,33 @@ export function NewReservationDialog({
             ...guestData,
             source: data.source,
             refId: data.refId,
+            status: status,
           },
           rooms: data.rooms.map((r, index) => {
-            const selectedRoom = allRooms.find(room => room.roomNo === r.roomNo);
+            const selectedRoom = allRooms.find(
+              (room) => room.roomNo === r.roomNo,
+            );
             if (!selectedRoom) throw new Error(`Room ${r.roomNo} not found`);
 
-            const roomSubtotal = parseFloat(r.roomPrice) * stayDuration;
+            const roomPrice = parseFloat(r.roomPrice || "0") || 0;
+            const roomSubtotal = roomPrice * stayDuration;
             let roomPaidAmount = 0;
             let roomDueAmount = roomSubtotal;
 
             if (index === 0) {
-              // Apply all taxes and the whole advance payment to the first room for now
-              // This ensures the total group due is correct when summed up
-              roomDueAmount = roomSubtotal + sstValue + tourismTaxValue - discountValue - paidAmountValue;
+              roomDueAmount =
+                roomSubtotal +
+                sstValue +
+                tourismTaxValue -
+                discountValue -
+                paidAmountValue;
               roomPaidAmount = paidAmountValue;
             }
 
             return {
               ...guestData,
               roomId: selectedRoom._id,
+              status: status,
               stay: {
                 arrival: data.arrivalDate,
                 departure: data.departureDate,
@@ -247,8 +416,12 @@ export function NewReservationDialog({
                 children: r.children,
               },
               rate: {
-                roomPrice: parseFloat(r.roomPrice),
-                subtotal: roomSubtotal + (index === 0 ? sstValue + tourismTaxValue - discountValue : 0),
+                roomPrice: roomPrice,
+                subtotal:
+                  roomSubtotal +
+                  (index === 0
+                    ? sstValue + tourismTaxValue - discountValue
+                    : 0),
                 sst: index === 0 ? sstValue : 0,
                 tourismTax: index === 0 ? tourismTaxValue : 0,
                 discount: index === 0 ? discountValue : 0,
@@ -258,9 +431,9 @@ export function NewReservationDialog({
                 dueAmount: roomDueAmount,
                 paymentMethod: data.paymentMethod,
                 remarks: data.remarks,
-              }
+              },
             };
-          })
+          }),
         };
         const response = await createGroup(payload);
         if (response) {
@@ -271,13 +444,13 @@ export function NewReservationDialog({
       } else {
         // Handle Single Reservation
         const roomInfo = data.rooms[0];
-        const selectedRoom = allRooms.find(r => r.roomNo === roomInfo.roomNo);
+        const selectedRoom = allRooms.find((r) => r.roomNo === roomInfo.roomNo);
         if (!selectedRoom) throw new Error(`Room ${roomInfo.roomNo} not found`);
 
         const payload = {
           ...guestData,
           roomId: selectedRoom._id,
-          status: RESERVATION_STATUS.CONFIRMED,
+          status: status,
           stay: {
             arrival: data.arrivalDate,
             departure: data.departureDate,
@@ -285,15 +458,15 @@ export function NewReservationDialog({
             children: roomInfo.children,
           },
           rate: {
-            roomPrice: parseFloat(roomInfo.roomPrice || "0"),
-            subtotal: parseFloat(calculateTotalAmount()),
-            sst: parseFloat(data.sst || "0"),
-            tourismTax: parseFloat(data.tourismTax || "0"),
-            discount: parseFloat(data.discount || "0"),
+            roomPrice: parseFloat(roomInfo.roomPrice || "0") || 0,
+            subtotal: parseFloat(calculateTotalAmount()) || 0,
+            sst: parseFloat(data.sst || "0") || 0,
+            tourismTax: parseFloat(data.tourismTax || "0") || 0,
+            discount: parseFloat(data.discount || "0") || 0,
           },
           payment: {
-            paidAmount: parseFloat(data.paidAmount || "0"),
-            dueAmount: parseFloat(calculateDueAmount()),
+            paidAmount: parseFloat(data.paidAmount || "0") || 0,
+            dueAmount: parseFloat(calculateDueAmount()) || 0,
             paymentMethod: data.paymentMethod,
             remarks: data.remarks,
           },
@@ -311,14 +484,21 @@ export function NewReservationDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      toast.success("Reservation confirmed");
+      toast.success(
+        mode === "checkin"
+          ? "Check-in completed successfully"
+          : "Reservation confirmed",
+      );
       setStep(4);
     },
     onError: (error: any) => {
-      toast.error("Reservation failed", {
-        description: error?.response?.data?.message || error.message,
-        icon: <Loader2 className="h-5 w-5 text-red-500" />,
-      });
+      toast.error(
+        mode === "checkin" ? "Check-in failed" : "Reservation failed",
+        {
+          description: error?.response?.data?.message || error.message,
+          icon: <Loader2 className="h-5 w-5 text-red-500" />,
+        },
+      );
     },
   });
 
@@ -342,33 +522,7 @@ export function NewReservationDialog({
   const handleBack = () => step > 1 && setStep(step - 1);
 
   const onSubmit = (data: z.infer<typeof reservationSchema>) => {
-    reserveRoom(data);
-  };
-
-  const handleReset = () => {
-    form.reset();
-    setStep(1);
-    setSelectedGuest(null);
-    setReservationData(null);
-  };
-
-  const calculateTotalAmount = () => {
-    const totalRoomPrice = form.watch("rooms").reduce((acc, r) => acc + (parseFloat(r.roomPrice || "0") * stayDuration), 0);
-    const sst = parseFloat(form.watch("sst") || "0");
-    const tourismTax = parseFloat(form.watch("tourismTax") || "0");
-
-    const subtotal = totalRoomPrice + sst + tourismTax;
-
-    return subtotal.toFixed(2);
-  };
-
-  const calculateDueAmount = () => {
-    const totalAmount = parseFloat(calculateTotalAmount());
-    const paidAmount = parseFloat(form.watch("paidAmount") || "0");
-    const discount = parseFloat(form.watch("discount") || "0");
-
-    const dueAmount = totalAmount - paidAmount - discount;
-    return dueAmount.toFixed(2);
+    processReservation(data);
   };
 
   const isLoading = isLoadingRooms;
@@ -376,14 +530,27 @@ export function NewReservationDialog({
   const handleGuestSelection = (guest: any) => {
     setSelectedGuest(guest);
 
-    form.setValue("name", guest.name || guest.guest?.name, { shouldDirty: true });
-    form.setValue("phone", guest.phone || guest.guest?.phone || "", { shouldDirty: true });
-    form.setValue("email", guest.email || guest.guest?.email || "", { shouldDirty: true });
-    form.setValue("passport", guest.passport || guest.guest?.passport || "", { shouldDirty: true });
-    form.setValue("country", guest.country || guest.guest?.country || "", { shouldDirty: true });
+    form.setValue("name", guest.name || guest.guest?.name, {
+      shouldDirty: true,
+    });
+    form.setValue("phone", guest.phone || guest.guest?.phone || "", {
+      shouldDirty: true,
+    });
+    form.setValue("email", guest.email || guest.guest?.email || "", {
+      shouldDirty: true,
+    });
+    form.setValue("passport", guest.passport || guest.guest?.passport || "", {
+      shouldDirty: true,
+    });
+    form.setValue("country", guest.country || guest.guest?.country || "", {
+      shouldDirty: true,
+    });
 
-    toast.success(`Guest information loaded: ${guest.name || guest.guest?.name}`);
+    toast.success(
+      `Guest information loaded: ${guest.name || guest.guest?.name}`,
+    );
   };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl p-0 overflow-auto max-h-148">
@@ -392,14 +559,20 @@ export function NewReservationDialog({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
-                <Hotel className="h-5 w-5 text-primary" />
+                {mode === "checkin" ? (
+                  <CalendarCheck className="h-5 w-5 text-primary" />
+                ) : (
+                  <Hotel className="h-5 w-5 text-primary" />
+                )}
               </div>
               <div>
                 <DialogTitle className="text-lg font-semibold">
-                  New Reservation
+                  {mode === "checkin" ? "Guest Check-in" : "New Reservation"}
                 </DialogTitle>
                 <p className="text-sm text-muted-foreground">
-                  Create a new room reservation
+                  {mode === "checkin"
+                    ? `Complete check-in process for Room ${room?.roomNo || "-"}`
+                    : "Create a new room reservation"}
                 </p>
               </div>
             </div>
@@ -463,12 +636,16 @@ export function NewReservationDialog({
                 {step === 1 && (
                   <div className="space-y-6">
                     <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/30">
-                      <Label className="text-sm font-medium">Reservation Type</Label>
+                      <Label className="text-sm font-medium">
+                        Reservation Type
+                      </Label>
                       <RadioGroup
+                        disabled={!!existingReservation}
                         defaultValue={isGroup ? "group" : "single"}
+                        value={isGroup ? "group" : "single"}
                         onValueChange={(val) => {
-                            setIsGroup(val === "group");
-                            form.setValue("isGroup", val === "group");
+                          setIsGroup(val === "group");
+                          form.setValue("isGroup", val === "group");
                         }}
                         className="flex gap-4"
                       >
@@ -491,7 +668,10 @@ export function NewReservationDialog({
                           <FormItem>
                             <FormLabel>Group Name *</FormLabel>
                             <FormControl>
-                              <Input placeholder="e.g. Ahmad Family" {...field} />
+                              <Input
+                                placeholder="e.g. Ahmad Family"
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -606,7 +786,7 @@ export function NewReservationDialog({
 
                       <FormField
                         control={form.control as any}
-                        name="otas"
+                        name="source"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
@@ -615,7 +795,7 @@ export function NewReservationDialog({
                             </FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                             >
                               <FormControl>
                                 <SelectTrigger className="h-10 w-full">
@@ -750,12 +930,20 @@ export function NewReservationDialog({
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium">Room Selection</h3>
-                        {isGroup && (
+                        {isGroup && !existingReservation && (
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => append({ roomType: "" as any, roomNo: "", roomPrice: "0", adults: 1, children: 0 })}
+                            onClick={() =>
+                              append({
+                                roomType: "" as any,
+                                roomNo: "",
+                                roomPrice: "0",
+                                adults: 1,
+                                children: 0,
+                              })
+                            }
                             className="gap-1"
                           >
                             <Plus className="h-4 w-4" />
@@ -767,31 +955,38 @@ export function NewReservationDialog({
                       <div className="space-y-4">
                         {fields.map((field, index) => (
                           <Card key={field.id} className="relative">
-                            {isGroup && fields.length > 1 && (
+                            {isGroup &&
+                              fields.length > 1 &&
+                              !existingReservation && (
                                 <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 text-destructive"
-                                    onClick={() => remove(index)}
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2 text-destructive"
+                                  onClick={() => remove(index)}
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                            )}
+                              )}
                             <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                               <FormField
                                 control={form.control as any}
                                 name={`rooms.${index}.roomType`}
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs">Room Type *</FormLabel>
+                                    <FormLabel className="text-xs">
+                                      Room Type *
+                                    </FormLabel>
                                     <Select
+                                      disabled={!!existingReservation}
                                       onValueChange={(val) => {
                                         field.onChange(val);
-                                        // Reset room number when type changes
-                                        form.setValue(`rooms.${index}.roomNo`, "");
+                                        form.setValue(
+                                          `rooms.${index}.roomNo`,
+                                          "",
+                                        );
                                       }}
-                                      defaultValue={field.value}
+                                      value={field.value}
                                     >
                                       <FormControl>
                                         <SelectTrigger className="h-9">
@@ -816,8 +1011,11 @@ export function NewReservationDialog({
                                 name={`rooms.${index}.roomNo`}
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs">Room No *</FormLabel>
+                                    <FormLabel className="text-xs">
+                                      Room No *
+                                    </FormLabel>
                                     <Select
+                                      disabled={!!existingReservation}
                                       onValueChange={field.onChange}
                                       value={field.value}
                                     >
@@ -828,15 +1026,21 @@ export function NewReservationDialog({
                                       </FormControl>
                                       <SelectContent>
                                         {allRooms
-                                          .filter(r => r.roomType === form.watch(`rooms.${index}.roomType`))
+                                          .filter(
+                                            (r) =>
+                                              r.roomType ===
+                                              form.watch(
+                                                `rooms.${index}.roomType`,
+                                              ),
+                                          )
                                           .map((room) => (
-                                          <SelectItem
-                                            key={room._id}
-                                            value={room.roomNo}
-                                          >
-                                            {room.roomNo}
-                                          </SelectItem>
-                                        ))}
+                                            <SelectItem
+                                              key={room._id}
+                                              value={room.roomNo}
+                                            >
+                                              {room.roomNo}
+                                            </SelectItem>
+                                          ))}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
@@ -849,9 +1053,15 @@ export function NewReservationDialog({
                                 name={`rooms.${index}.roomPrice`}
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs">Price *</FormLabel>
+                                    <FormLabel className="text-xs">
+                                      Price *
+                                    </FormLabel>
                                     <FormControl>
-                                      <Input type="number" {...field} className="h-9" />
+                                      <Input
+                                        type="number"
+                                        {...field}
+                                        className="h-9"
+                                      />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -864,9 +1074,20 @@ export function NewReservationDialog({
                                   name={`rooms.${index}.adults`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-xs">Adults</FormLabel>
+                                      <FormLabel className="text-xs">
+                                        Adults
+                                      </FormLabel>
                                       <FormControl>
-                                        <Input type="number" {...field} className="h-9" onChange={e => field.onChange(parseInt(e.target.value))} />
+                                        <Input
+                                          type="number"
+                                          {...field}
+                                          className="h-9"
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              parseInt(e.target.value),
+                                            )
+                                          }
+                                        />
                                       </FormControl>
                                     </FormItem>
                                   )}
@@ -876,9 +1097,20 @@ export function NewReservationDialog({
                                   name={`rooms.${index}.children`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-xs">Children</FormLabel>
+                                      <FormLabel className="text-xs">
+                                        Children
+                                      </FormLabel>
                                       <FormControl>
-                                        <Input type="number" {...field} className="h-9" onChange={e => field.onChange(parseInt(e.target.value))} />
+                                        <Input
+                                          type="number"
+                                          {...field}
+                                          className="h-9"
+                                          onChange={(e) =>
+                                            field.onChange(
+                                              parseInt(e.target.value),
+                                            )
+                                          }
+                                        />
                                       </FormControl>
                                     </FormItem>
                                   )}
@@ -912,7 +1144,7 @@ export function NewReservationDialog({
                               <FormItem>
                                 <FormLabel className="flex items-center gap-2">
                                   <DollarSign className="h-4 w-4" />
-                                  Advance Payment
+                                  Paid Amount
                                 </FormLabel>
                                 <FormControl>
                                   <Input
@@ -1063,44 +1295,89 @@ export function NewReservationDialog({
                               <span>{stayDuration} nights</span>
                             </div>
                             <div className="space-y-2">
-                                <span className="text-xs text-muted-foreground font-semibold">Rooms</span>
-                                {form.watch("rooms").map((r, idx) => (
-                                    <div key={idx} className="flex justify-between text-sm pl-2">
-                                        <span>{r.roomNo || "Not selected"} ({r.roomType})</span>
-                                        <span>RM {parseFloat(r.roomPrice || "0").toFixed(2)} x {stayDuration}</span>
-                                    </div>
-                                ))}
+                              <span className="text-xs text-muted-foreground font-semibold">
+                                Rooms
+                              </span>
+                              {form.watch("rooms").map((r, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex justify-between text-sm pl-2"
+                                >
+                                  <span>
+                                    {r.roomNo || "Not selected"} ({r.roomType})
+                                  </span>
+                                  <span>
+                                    RM{" "}
+                                    {parseFloat(r.roomPrice || "0").toFixed(2)}{" "}
+                                    x {stayDuration}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
                             <Separator />
                             <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Subtotal</span>
-                              <span>RM {(parseFloat(calculateTotalAmount()) - parseFloat(form.watch("sst") || "0") - parseFloat(form.watch("tourismTax") || "0")).toFixed(2)}</span>
+                              <span className="text-muted-foreground">
+                                Subtotal
+                              </span>
+                              <span>
+                                RM{" "}
+                                {(
+                                  parseFloat(calculateTotalAmount()) -
+                                  parseFloat(form.watch("sst") || "0") -
+                                  parseFloat(form.watch("tourismTax") || "0")
+                                ).toFixed(2)}
+                              </span>
                             </div>
                             {parseFloat(form.watch("sst") || "0") > 0 && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">SST</span>
-                                    <span>RM {parseFloat(form.watch("sst") || "0").toFixed(2)}</span>
-                                </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  SST
+                                </span>
+                                <span>
+                                  RM{" "}
+                                  {parseFloat(form.watch("sst") || "0").toFixed(
+                                    2,
+                                  )}
+                                </span>
+                              </div>
                             )}
-                            {parseFloat(form.watch("tourismTax") || "0") > 0 && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Tourism Tax</span>
-                                    <span>RM {parseFloat(form.watch("tourismTax") || "0").toFixed(2)}</span>
-                                </div>
+                            {parseFloat(form.watch("tourismTax") || "0") >
+                              0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  Tourism Tax
+                                </span>
+                                <span>
+                                  RM{" "}
+                                  {parseFloat(
+                                    form.watch("tourismTax") || "0",
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
                             )}
                             <div className="flex justify-between font-medium">
                               <span>Total Amount</span>
                               <span>RM {calculateTotalAmount()}</span>
                             </div>
                             {parseFloat(form.watch("discount") || "0") > 0 && (
-                                <div className="flex justify-between text-sm text-green-600">
-                                    <span>Discount</span>
-                                    <span>- RM {parseFloat(form.watch("discount") || "0").toFixed(2)}</span>
-                                </div>
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span>Discount</span>
+                                <span>
+                                  - RM{" "}
+                                  {parseFloat(
+                                    form.watch("discount") || "0",
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
                             )}
                             <div className="flex justify-between text-sm font-semibold text-primary">
                               <span>Advance Payment</span>
-                              <span>RM {parseFloat(form.watch("paidAmount") || "0").toFixed(2)}</span>
+                              <span>
+                                RM{" "}
+                                {parseFloat(
+                                  form.watch("paidAmount") || "0",
+                                ).toFixed(2)}
+                              </span>
                             </div>
                             <Separator className="h-0.5 bg-primary/20" />
                             <div className="flex justify-between font-bold text-lg text-destructive">
@@ -1131,10 +1408,14 @@ export function NewReservationDialog({
                             </div>
                             <div>
                               <h3 className="text-xl font-semibold">
-                                Reservation Confirmed!
+                                {mode === "checkin"
+                                  ? "Check-in Successful!"
+                                  : "Reservation Confirmed!"}
                               </h3>
                               <p className="text-sm text-muted-foreground">
-                                Your reservation has been successfully created
+                                {mode === "checkin"
+                                  ? "The guest has been checked in successfully."
+                                  : "Your reservation has been successfully created"}
                               </p>
                             </div>
                           </div>
@@ -1263,7 +1544,9 @@ export function NewReservationDialog({
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Confirm Reservation
+                        {mode === "checkin"
+                          ? "Complete Check-in"
+                          : "Confirm Reservation"}
                       </>
                     )}
                   </Button>
@@ -1321,6 +1604,3 @@ export function NewReservationDialog({
     </Dialog>
   );
 }
-
-
-

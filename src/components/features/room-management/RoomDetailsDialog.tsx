@@ -7,10 +7,9 @@ import {
   DialogTitle,
 } from "@/src/components/ui/dialog";
 import { GetRoomIcon } from "@/src/shared/GetRoomIcon";
-import { Home, User, Calendar, Clock } from "lucide-react";
+import { Home, User, Calendar, Clock, CalendarCheck } from "lucide-react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import BookRoomDialog from "../room-services/BookRoomDialog";
 import StayOver from "../room-services/StayOver";
 import CheckOut from "../room-services/CheckOut";
 import CancelReservationButton from "../room-services/CancelReservationButton";
@@ -21,7 +20,7 @@ import { RoomStatus } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
 import { format } from "date-fns";
 import { cn } from "@/src/lib/utils";
-import { NewReservationDialog } from "../reservation/NewReservationDialog";
+import { ReservationDialog } from "../reservation/ReservationDialog";
 
 type RoomDetailsDialogProps = {
   roomStatus: RoomStatus;
@@ -84,8 +83,8 @@ export default function RoomDetailsDialog({
   reservation,
   setOpen,
 }: RoomDetailsDialogProps) {
-  const [isNewReservationDialogOpen, setIsNewReservationDialogOpen] =
-    useState(false);
+  const [isReservationDialogOpen, setIsReservationDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"reserve" | "checkin">("reserve");
 
   const config = STATUS_CONFIG[roomStatus];
 
@@ -104,12 +103,18 @@ export default function RoomDetailsDialog({
     return `${nights} night${nights !== 1 ? "s" : ""}`;
   };
 
-  const handleNewReservationClick = () => {
-    setIsNewReservationDialogOpen(true);
+  const handleReserveClick = () => {
+    setDialogMode("reserve");
+    setIsReservationDialogOpen(true);
   };
 
-  const closeNewReservationDialog = () => {
-    setIsNewReservationDialogOpen(false);
+  const handleCheckInClick = () => {
+    setDialogMode("checkin");
+    setIsReservationDialogOpen(true);
+  };
+
+  const closeReservationDialog = () => {
+    setIsReservationDialogOpen(false);
   };
 
   return (
@@ -159,79 +164,55 @@ export default function RoomDetailsDialog({
 
       {/* Content */}
       <div className="px-6">
-        {/* Room Details */}
-        {/* <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <div className="text-xs text-muted-foreground">Capacity</div>
-            <div className="flex items-center gap-2 font-medium">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span>Max {room.maxCapacity} guests</span>
-            </div>
-          </div>
-
-          {reservation?.rate && (
-            <div className="space-y-1">
-              <div className="text-xs text-muted-foreground">Rate</div>
-              <div className="flex items-center gap-2 font-medium">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span>${reservation.rate.toFixed(2)}/night</span>
-              </div>
-            </div>
-          )}
-        </div> */}
-
         {/* Guest Information */}
         {hasGuest && (
-          <>
-            {/* <Separator /> */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">{guestName || "N/A"}</div>
-                    <div className="text-xs text-muted-foreground capitalize">
-                      {guestStatus.toLowerCase()}
-                    </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">{guestName || "N/A"}</div>
+                  <div className="text-xs text-muted-foreground capitalize">
+                    {guestStatus.toLowerCase()}
                   </div>
                 </div>
               </div>
-
-              {(arrival || departure) && (
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {arrival && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span className="text-xs">Check-in</span>
-                      </div>
-                      <div className="font-medium">
-                        {format(arrival, "MMM d, yyyy")}
-                      </div>
-                    </div>
-                  )}
-
-                  {departure && (
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" />
-                        <span className="text-xs">Check-out</span>
-                      </div>
-                      <div className="font-medium">
-                        {format(departure, "MMM d, yyyy")}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {arrival && departure && getStayDuration() && (
-                <Badge variant="outline" className="w-fit">
-                  {getStayDuration()}
-                </Badge>
-              )}
             </div>
-          </>
+
+            {(arrival || departure) && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {arrival && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span className="text-xs">Check-in</span>
+                    </div>
+                    <div className="font-medium">
+                      {format(arrival, "MMM d, yyyy")}
+                    </div>
+                  </div>
+                )}
+
+                {departure && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      <span className="text-xs">Check-out</span>
+                    </div>
+                    <div className="font-medium">
+                      {format(departure, "MMM d, yyyy")}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {arrival && departure && getStayDuration() && (
+              <Badge variant="outline" className="w-fit">
+                {getStayDuration()}
+              </Badge>
+            )}
+          </div>
         )}
       </div>
 
@@ -243,16 +224,20 @@ export default function RoomDetailsDialog({
               variant="outline"
               size="sm"
               className="gap-2"
-              onClick={handleNewReservationClick}
+              onClick={handleReserveClick}
             >
               <Clock className="h-3.5 w-3.5" />
               Reserve
             </Button>
-            <BookRoomDialog
-              room={room}
-              allReservations={allReservations}
-              onClose={() => setOpen(false)}
-            />
+            <Button
+                variant="default"
+                size="sm"
+                className="gap-2"
+                onClick={handleCheckInClick}
+            >
+                <CalendarCheck className="h-4 w-4" />
+                Check-in
+            </Button>
           </div>
         )}
 
@@ -264,11 +249,15 @@ export default function RoomDetailsDialog({
                 onClose={() => setOpen(false)}
               />
             )}
-            <BookRoomDialog
-              room={room}
-              allReservations={allReservations}
-              onClose={() => setOpen(false)}
-            />
+            <Button
+                variant="default"
+                size="sm"
+                className="gap-2"
+                onClick={handleCheckInClick}
+            >
+                <CalendarCheck className="h-4 w-4" />
+                Check-in
+            </Button>
           </div>
         )}
 
@@ -288,18 +277,18 @@ export default function RoomDetailsDialog({
             <RoomService room={room} onClose={() => setOpen(false)} />
             {reservation && (
                 <>
-                    <MoveRoom 
-                        reservationId={reservation._id || ""} 
-                        currentRoom={room as any} 
-                        onClose={() => setOpen(false)} 
+                    <MoveRoom
+                        reservationId={reservation._id || ""}
+                        currentRoom={room as any}
+                        onClose={() => setOpen(false)}
                     />
-                    <StayOver 
-                        reservation={reservation} 
-                        onClose={() => setOpen(false)} 
+                    <StayOver
+                        reservation={reservation}
+                        onClose={() => setOpen(false)}
                     />
-                    <CheckOut 
-                        reservation={reservation} 
-                        onClose={() => setOpen(false)} 
+                    <CheckOut
+                        reservation={reservation}
+                        onClose={() => setOpen(false)}
                     />
                 </>
             )}
@@ -309,11 +298,13 @@ export default function RoomDetailsDialog({
 
       <DialogDescription className="sr-only">Room Details</DialogDescription>
 
-      <NewReservationDialog
+      <ReservationDialog
         allReservations={allReservations}
-        isOpen={isNewReservationDialogOpen}
-        onClose={closeNewReservationDialog}
+        isOpen={isReservationDialogOpen}
+        onClose={closeReservationDialog}
         room={room}
+        mode={dialogMode}
+        existingReservation={reservation}
       />
     </DialogContent>
   );

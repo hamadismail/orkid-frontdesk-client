@@ -14,7 +14,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { GuestDetailsDialog } from "@/src/shared/GuestDetailsDialog";
 import { IReservation } from "@/src/types/reservation.interface";
 import { format } from "date-fns";
-import { NewReservationDialog } from "./NewReservationDialog";
+import { ReservationDialog } from "./ReservationDialog";
 import { Input } from "@/src/components/ui/input";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import TableSkeleton from "@/src/shared/TableSkeleton";
@@ -48,7 +48,7 @@ export default function Reservation() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reservations"],
-    queryFn: () => getAllReservations({ status: RESERVATION_STATUS.CONFIRMED }),
+    queryFn: () => getAllReservations({ status: RESERVATION_STATUS.RESERVED }),
   });
 
   const { mutate: performBatchCheckIn, isPending: isCheckingIn } = useMutation({
@@ -248,7 +248,7 @@ export default function Reservation() {
         />
       )}
 
-      <NewReservationDialog
+      <ReservationDialog
         allReservations={allReservations}
         isOpen={isNewReservationDialogOpen}
         onClose={closeNewReservationDialog}
