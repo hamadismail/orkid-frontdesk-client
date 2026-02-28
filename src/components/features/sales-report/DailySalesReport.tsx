@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useRef } from "react";
@@ -30,16 +31,30 @@ export function DailySalesReport({
   const totalSales = payments.reduce((acc, p) => acc + (p.amount || 0), 0);
 
   const categorizedByMethod = payments.reduce((acc, p) => {
-      const method = p.paymentMethod || "Unknown";
-      if (!acc[method]) acc[method] = { payments: [], total: 0 };
-      acc[method].payments.push(p);
-      acc[method].total += (p.amount || 0);
-      return acc;
+    const method = p.paymentMethod || "Unknown";
+    if (!acc[method]) acc[method] = { payments: [], total: 0 };
+    acc[method].payments.push(p);
+    acc[method].total += p.amount || 0;
+    return acc;
+  }, {} as any);
+
+  const categorizedBySource = payments.reduce((acc, p) => {
+    const source =
+      p.source ||
+      (typeof p.reservationId === "object" && p.reservationId?.source) ||
+      "Unknown";
+    if (!acc[source]) acc[source] = { payments: [], total: 0 };
+    acc[source].payments.push(p);
+    acc[source].total += p.amount || 0;
+    return acc;
   }, {} as any);
 
   return (
     <div className="bg-gray-100">
-      <div ref={contentRef} className="p-6 bg-white shadow-md rounded-none font-mono">
+      <div
+        ref={contentRef}
+        className="p-6 bg-white shadow-md rounded-none font-mono"
+      >
         <header className="flex justify-between items-center pb-3 border-b mb-4">
           <h1 className="text-2xl font-bold">Eco Hotel - Daily Sales</h1>
           <p className="font-semibold">{format(reportDate, "PPP")}</p>
@@ -58,38 +73,74 @@ export function DailySalesReport({
           </div>
         </section>
 
-        <section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <section className="mb-8">
             <h2 className="text-lg font-bold mb-2">Breakdown by Method</h2>
             {Object.entries(categorizedByMethod).map(([method, data]: any) => (
-                <div key={method} className="mb-4 border">
-                    <div className="bg-muted p-2 font-bold flex justify-between">
-                        <span>{method}</span>
-                        <span>Total: RM {data.total.toFixed(2)}</span>
-                    </div>
-                    <table className="w-full text-xs">
-                        <thead>
-                            <tr className="border-b">
-                                <th className="text-left p-1">Guest</th>
-                                <th className="text-left p-1">Room</th>
-                                <th className="text-right p-1">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.payments.map((p: IPayment) => (
-                                <tr key={p._id} className="border-b">
-                                    <td className="p-1">{p.guestName}</td>
-                                    <td className="p-1">{p.roomNo}</td>
-                                    <td className="text-right p-1">{p.amount.toFixed(2)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+              <div key={method} className="mb-4 border">
+                <div className="bg-muted p-2 font-bold flex justify-between">
+                  <span>{method}</span>
+                  <span>Total: RM {data.total.toFixed(2)}</span>
                 </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-1">Guest</th>
+                      <th className="text-left p-1">Room</th>
+                      <th className="text-right p-1">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.payments.map((p: IPayment) => (
+                      <tr key={p._id} className="border-b">
+                        <td className="p-1">{p.guestName}</td>
+                        <td className="p-1">{p.roomNo}</td>
+                        <td className="text-right p-1">
+                          {p.amount.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ))}
-        </section>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold mb-2">Breakdown by Source/OTA</h2>
+            {Object.entries(categorizedBySource).map(([source, data]: any) => (
+              <div key={source} className="mb-4 border">
+                <div className="bg-muted p-2 font-bold flex justify-between">
+                  <span>{source}</span>
+                  <span>Total: RM {data.total.toFixed(2)}</span>
+                </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-1">Guest</th>
+                      <th className="text-left p-1">Room</th>
+                      <th className="text-right p-1">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.payments.map((p: IPayment) => (
+                      <tr key={p._id} className="border-b">
+                        <td className="p-1">{p.guestName}</td>
+                        <td className="p-1">{p.roomNo}</td>
+                        <td className="text-right p-1">
+                          {p.amount.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </section>
+        </div>
       </div>
       <div className="p-4 text-center">
-          <Button onClick={handlePrint}>Print Report</Button>
+        <Button onClick={handlePrint}>Print Report</Button>
       </div>
     </div>
   );

@@ -38,10 +38,11 @@ function PaymentTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>(RESERVATION_STATUS.CHECKED_IN);
+  const [dueOnly, setDueOnly] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations-payment", page, search, status],
-    queryFn: () => getAllReservations({ page, search, status }),
+    queryKey: ["reservations-payment", page, search, status, dueOnly],
+    queryFn: () => getAllReservations({ page, search, status, due: dueOnly }),
   });
 
   const consolidatedBookings = useMemo(() => {
@@ -51,8 +52,9 @@ function PaymentTable() {
     rawReservations.forEach((res: IReservation) => {
       // Use groupId as the key, or reservation _id if groupId is missing
       const groupObj = res.groupId as any;
-      const groupId = typeof groupObj === 'string' ? groupObj : (groupObj?._id || res._id);
-      
+      const groupId =
+        typeof groupObj === "string" ? groupObj : groupObj?._id || res._id;
+
       if (!groups[groupId]) {
         groups[groupId] = {
           _id: groupId,
@@ -71,7 +73,7 @@ function PaymentTable() {
       if (room?.roomNo) {
         groups[groupId].rooms.push(room.roomNo);
       }
-      
+
       groups[groupId].totalAmount += res.rate.subtotal;
       groups[groupId].paidAmount += res.payment.paidAmount;
       groups[groupId].dueAmount += res.payment.dueAmount;
@@ -105,28 +107,39 @@ function PaymentTable() {
             }}
           />
         </div>
-        <Select
-          value={status}
-          onValueChange={(val) => {
-            setStatus(val);
-            setPage(1);
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={RESERVATION_STATUS.CHECKED_IN}>
-              Checked In
-            </SelectItem>
-            <SelectItem value={RESERVATION_STATUS.CHECKED_OUT}>
-              Checked Out
-            </SelectItem>
-            <SelectItem value={RESERVATION_STATUS.CONFIRMED}>
-              Confirmed
-            </SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select
+            value={status}
+            onValueChange={(val) => {
+              setStatus(val);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={RESERVATION_STATUS.CHECKED_IN}>
+                Checked In
+              </SelectItem>
+              <SelectItem value={RESERVATION_STATUS.CHECKED_OUT}>
+                Checked Out
+              </SelectItem>
+              <SelectItem value={RESERVATION_STATUS.CONFIRMED}>
+                Confirmed
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant={dueOnly ? "destructive" : "outline"}
+            onClick={() => {
+              setDueOnly(!dueOnly);
+              setPage(1);
+            }}
+          >
+            {dueOnly ? "Showing Due Only" : "Filter by Due"}
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -165,11 +178,12 @@ function PaymentTable() {
                   <TableRow key={item._id}>
                     <TableCell>
                       <div className="font-medium">{guest?.name}</div>
-                      {item.groupName && item.groupName !== "Single Booking" && (
-                        <div className="text-xs text-primary font-semibold">
-                          Group: {item.groupName}
-                        </div>
-                      )}
+                      {item.groupName &&
+                        item.groupName !== "Single Booking" && (
+                          <div className="text-xs text-primary font-semibold">
+                            Group: {item.groupName}
+                          </div>
+                        )}
                       <div className="text-xs text-muted-foreground">
                         {guest?.phone}
                       </div>
@@ -177,7 +191,11 @@ function PaymentTable() {
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {item.rooms.map((roomNo: string) => (
-                          <Badge key={roomNo} variant="secondary" className="text-[10px] px-1 py-0">
+                          <Badge
+                            key={roomNo}
+                            variant="secondary"
+                            className="text-[10px] px-1 py-0"
+                          >
                             {roomNo}
                           </Badge>
                         ))}

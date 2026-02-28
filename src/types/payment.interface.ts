@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { OTAS, PAYMENT_METHOD, PAYMENT_TYPE } from './enums';
 
 export interface IPayment {
   _id?: string;
-  reservationId?: string;
+  reservationId?: string | { source: OTAS };
   groupId: string;
   type: PAYMENT_TYPE;
   amount: number;
@@ -10,6 +11,7 @@ export interface IPayment {
   guestName: string;
   roomNo: string;
   roomType: string;
+  source?: OTAS;
   remarks?: string;
   createdBy?: string;
   createdAt?: string;
