@@ -13,6 +13,13 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
+import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
@@ -44,6 +51,8 @@ import PrintableTable from "@/src/shared/DepositReceipt";
 export default function GuestTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
@@ -54,8 +63,14 @@ export default function GuestTable() {
   );
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations-guest-view", page, search],
-    queryFn: () => getAllReservations({ page, search }),
+    queryKey: ["reservations-guest-view", page, search, status, sortBy],
+    queryFn: () => getAllReservations({ 
+      page, 
+      search, 
+      status: status === "all" ? undefined : status, 
+      sortBy, 
+      sortOrder: "desc" 
+    }),
   });
 
   const { data: checkedInReservations, isLoading: isLoadingDeposits } = useQuery({
@@ -140,6 +155,41 @@ export default function GuestTable() {
             }}
           />
         </div>
+        <Select
+          value={status}
+          onValueChange={(val) => {
+            setStatus(val);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            {Object.values(RESERVATION_STATUS).map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={sortBy}
+          onValueChange={(val) => {
+            setSortBy(val);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Sort By" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="createdAt">Newest Check-In</SelectItem>
+            <SelectItem value="checkedOutAt">Check-out Date</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="rounded-md border p-1">
