@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -116,6 +116,7 @@ export function ReservationDialog({
     "reservation",
   );
   const queryClient = useQueryClient();
+  const prevOpen = useRef(isOpen);
 
   // 1. Form initialization
   const form = useForm<z.infer<typeof reservationSchema>>({
@@ -138,8 +139,8 @@ export function ReservationDialog({
               roomType: room.roomType,
               roomNo: room.roomNo,
               roomPrice: "0",
-              adults: 1,
-              children: 0,
+              adults: room.adults || 1,
+              children: room.children || 0,
             },
           ]
         : [
@@ -180,8 +181,8 @@ export function ReservationDialog({
               roomType: room.roomType,
               roomNo: room.roomNo,
               roomPrice: "0",
-              adults: 1,
-              children: 0,
+              adults: room.adults || 1,
+              children: room.children || 0,
             },
           ]
         : [
@@ -209,56 +210,60 @@ export function ReservationDialog({
 
   // Effect to pre-fill from existing reservation
   useEffect(() => {
-    if (existingReservation && isOpen) {
-      const guest = existingReservation.guestId as unknown as IGuest;
-      const resRoom =
-        typeof existingReservation.roomId === "object"
-          ? existingReservation.roomId
-          : room && room._id === existingReservation.roomId
-            ? room
-            : null;
-
-      form.reset({
-        isGroup:
-          !!existingReservation.groupId &&
-          (existingReservation.groupId as any).groupName !== "Single Booking",
-        groupName: (existingReservation.groupId as any)?.groupName || "",
-        name: guest?.name || "",
-        phone: guest?.phone || "",
-        email: guest?.email || "",
-        passport: guest?.passport || "",
-        country: guest?.country || "",
-        source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
-        refId: existingReservation.confirmationNo,
-        arrivalDate: new Date(existingReservation.stay.arrival),
-        departureDate: new Date(existingReservation.stay.departure),
-        rooms: [
-          {
-            roomType: (resRoom as any)?.roomType || room?.roomType || "",
-            roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
-            roomPrice: existingReservation.rate.roomPrice.toString(),
-            adults: existingReservation.stay.adults,
-            children: existingReservation.stay.children,
-          },
-        ],
-        paidAmount: existingReservation.payment.paidAmount.toString(),
-        paymentMethod:
-          (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
-          PAYMENT_METHOD.CASH,
-        remarks: existingReservation.payment.remarks || "",
-        sst: existingReservation.rate.sst?.toString() || "",
-        tourismTax: existingReservation.rate.tourismTax?.toString() || "",
-        discount: existingReservation.rate.discount?.toString() || "",
-      });
-      setSelectedGuest(guest);
-      setIsGroup(
-        !!existingReservation.groupId &&
-          (existingReservation.groupId as any).groupName !== "Single Booking",
-      );
-    } else if (!existingReservation && isOpen) {
-      // Reset to default for new reservation when dialog opens
-      handleReset();
+    if (isOpen && !prevOpen.current) {
+        // Just opened
+        if (existingReservation) {
+          const guest = existingReservation.guestId as unknown as IGuest;
+          const resRoom =
+            typeof existingReservation.roomId === "object"
+              ? existingReservation.roomId
+              : room && room._id === existingReservation.roomId
+                ? room
+                : null;
+    
+          form.reset({
+            isGroup:
+              !!existingReservation.groupId &&
+              (existingReservation.groupId as any).groupName !== "Single Booking",
+            groupName: (existingReservation.groupId as any)?.groupName || "",
+            name: guest?.name || "",
+            phone: guest?.phone || "",
+            email: guest?.email || "",
+            passport: guest?.passport || "",
+            country: guest?.country || "",
+            source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
+            refId: existingReservation.confirmationNo,
+            arrivalDate: new Date(existingReservation.stay.arrival),
+            departureDate: new Date(existingReservation.stay.departure),
+            rooms: [
+              {
+                roomType: (resRoom as any)?.roomType || room?.roomType || "",
+                roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
+                roomPrice: existingReservation.rate.roomPrice.toString(),
+                adults: existingReservation.stay.adults,
+                children: existingReservation.stay.children,
+              },
+            ],
+            paidAmount: existingReservation.payment.paidAmount.toString(),
+            paymentMethod:
+              (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
+              PAYMENT_METHOD.CASH,
+            remarks: existingReservation.payment.remarks || "",
+            sst: existingReservation.rate.sst?.toString() || "",
+            tourismTax: existingReservation.rate.tourismTax?.toString() || "",
+            discount: existingReservation.rate.discount?.toString() || "",
+          });
+          setSelectedGuest(guest);
+          setIsGroup(
+            !!existingReservation.groupId &&
+              (existingReservation.groupId as any).groupName !== "Single Booking",
+          );
+        } else {
+          // Reset to default for new reservation when dialog opens
+          handleReset();
+        }
     }
+    prevOpen.current = isOpen;
   }, [existingReservation, isOpen, room, form, handleReset]);
 
   // 2. Field Array
@@ -1016,7 +1021,14 @@ export function ReservationDialog({
                                     </FormLabel>
                                     <Select
                                       disabled={!!existingReservation}
-                                      onValueChange={field.onChange}
+                                      onValueChange={(val) => {
+                                        field.onChange(val);
+                                        const selected = allRooms.find(r => r.roomNo === val);
+                                        if (selected) {
+                                          form.setValue(`rooms.${index}.adults`, selected.adults || 1);
+                                          form.setValue(`rooms.${index}.children`, selected.children || 0);
+                                        }
+                                      }}
                                       value={field.value}
                                     >
                                       <FormControl>
