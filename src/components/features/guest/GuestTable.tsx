@@ -115,6 +115,9 @@ export default function GuestTable() {
     contentRef: depositReportRef,
   });
 
+  const formatDate = (date: any) =>
+    date ? format(new Date(date), "MMM d, HH:mm") : "-";
+
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
@@ -147,6 +150,8 @@ export default function GuestTable() {
               <TableHead>Guest Name</TableHead>
               <TableHead>Stay Duration</TableHead>
               <TableHead>Rooms</TableHead>
+              <TableHead>Actual In/Out</TableHead>
+              <TableHead>Activity</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -218,6 +223,20 @@ export default function GuestTable() {
                           </Badge>
                         </TableCell>
                         <TableCell>
+                          <div className="flex flex-col text-[10px] leading-tight">
+                            <span className="text-muted-foreground">In: {formatDate(reservations[0].createdAt)}</span>
+                            <span>Out: {formatDate(reservations[0].checkedOutAt)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-[10px] leading-tight text-muted-foreground">
+                            {reservations[0].status === RESERVATION_STATUS.CANCELLED && (
+                                <span className="text-destructive font-bold">Cxl: {formatDate(reservations[0].cancelledAt)}</span>
+                            )}
+                            <span className="italic">Mod: {formatDate(reservations[0].updatedAt)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           <Badge
                             variant={
                               reservations[0].status ===
@@ -272,6 +291,20 @@ export default function GuestTable() {
                             <TableCell className="text-xs font-bold">
                               Room {(res.roomId as any)?.roomNo} (
                               {(res.roomId as any)?.roomType})
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col text-[10px] leading-tight">
+                                <span className="text-muted-foreground">In: {formatDate(res.createdAt)}</span>
+                                <span>Out: {formatDate(res.checkedOutAt)}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col text-[10px] leading-tight text-muted-foreground">
+                                {res.status === RESERVATION_STATUS.CANCELLED && (
+                                    <span className="text-destructive font-bold">Cxl: {formatDate(res.cancelledAt)}</span>
+                                )}
+                                <span className="italic">Mod: {formatDate(res.updatedAt)}</span>
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge
