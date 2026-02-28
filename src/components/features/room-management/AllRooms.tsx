@@ -37,7 +37,7 @@ function AllRooms() {
 
   const { data: reservations, isLoading: ReserveLoading } = useQuery({
     queryKey: ["reservations"],
-    queryFn: () => getAllReservations(),
+    queryFn: () => getAllReservations({ limit: 1000 }),
   });
 
   const allRooms = useMemo(() => rooms || [], [rooms]);
@@ -49,62 +49,70 @@ function AllRooms() {
     return [];
   }, [reservations]);
 
-  const getRoomInfo = useCallback((room: IRoom) => {
-    const selectedDate = startOfDay(new Date(dateFilter));
+  const getRoomInfo = useCallback(
+    (room: IRoom) => {
+      const selectedDate = startOfDay(new Date(dateFilter));
 
-    // 1. Check if there's a reservation arriving on the selected date
-    const arrivalRes = allReservations.find((r: IReservation) => {
-      const resRoomId = typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-      const roomId =
-        typeof room._id === "object" ? (room._id as any).toString() : room._id;
+      // 1. Check if there's a reservation arriving on the selected date
+      const arrivalRes = allReservations.find((r: IReservation) => {
+        const resRoomId =
+          typeof r.roomId === "object" ? r.roomId._id : r.roomId;
+        const roomId =
+          typeof room._id === "object"
+            ? (room._id as any).toString()
+            : room._id;
 
-      if (resRoomId?.toString() !== roomId?.toString()) return false;
+        if (resRoomId?.toString() !== roomId?.toString()) return false;
 
-      const arrival = startOfDay(new Date(r.stay.arrival));
-      return (
-        [RESERVATION_STATUS.CONFIRMED, RESERVATION_STATUS.RESERVED].includes(
-          r.status,
-        ) && isSameDay(arrival, selectedDate)
-      );
-    });
+        const arrival = startOfDay(new Date(r.stay.arrival));
+        return (
+          [RESERVATION_STATUS.RESERVED].includes(r.status) &&
+          isSameDay(arrival, selectedDate)
+        );
+      });
 
-    // 2. Find the current stay (for name display on occupied rooms)
-    const currentRes = allReservations.find((r: IReservation) => {
-      const resRoomId = typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-      const roomId =
-        typeof room._id === "object" ? (room._id as any).toString() : room._id;
+      // 2. Find the current stay (for name display on occupied rooms)
+      const currentRes = allReservations.find((r: IReservation) => {
+        const resRoomId =
+          typeof r.roomId === "object" ? r.roomId._id : r.roomId;
+        const roomId =
+          typeof room._id === "object"
+            ? (room._id as any).toString()
+            : room._id;
 
-      return (
-        resRoomId?.toString() === roomId?.toString() &&
-        r.status === RESERVATION_STATUS.CHECKED_IN
-      );
-    });
+        return (
+          resRoomId?.toString() === roomId?.toString() &&
+          r.status === RESERVATION_STATUS.CHECKED_IN
+        );
+      });
 
-    const activeRes = arrivalRes || currentRes;
-    const guest = activeRes?.guestId as unknown as IGuest;
+      const activeRes = arrivalRes || currentRes;
+      const guest = activeRes?.guestId as unknown as IGuest;
 
-    // Determine visual status
-    let visualStatus = room.roomStatus;
+      // Determine visual status
+      let visualStatus = room.roomStatus;
 
-    if (arrivalRes) {
-      visualStatus = RoomStatus.RESERVED;
-    } else if (currentRes) {
-      const departure = startOfDay(new Date(currentRes.stay.departure));
-      // If departure is today or in the past, mark as DUE_OUT
-      if (departure <= selectedDate) {
-        visualStatus = RoomStatus.DUE_OUT;
+      if (arrivalRes) {
+        visualStatus = RoomStatus.RESERVED;
+      } else if (currentRes) {
+        const departure = startOfDay(new Date(currentRes.stay.departure));
+        // If departure is today or in the past, mark as DUE_OUT
+        if (departure <= selectedDate) {
+          visualStatus = RoomStatus.DUE_OUT;
+        }
       }
-    }
 
-    return {
-      roomStatus: visualStatus,
-      guestName: guest?.name || "",
-      guestStatus: activeRes?.status || "",
-      arrival: activeRes ? new Date(activeRes.stay.arrival) : undefined,
-      departure: activeRes ? new Date(activeRes.stay.departure) : undefined,
-      reservation: activeRes,
-    };
-  }, [dateFilter, allReservations]);
+      return {
+        roomStatus: visualStatus,
+        guestName: guest?.name || "",
+        guestStatus: activeRes?.status || "",
+        arrival: activeRes ? new Date(activeRes.stay.arrival) : undefined,
+        departure: activeRes ? new Date(activeRes.stay.departure) : undefined,
+        reservation: activeRes,
+      };
+    },
+    [dateFilter, allReservations],
+  );
 
   const roomStatusCounts = useMemo(() => {
     const counts: Record<string, number> = {
@@ -188,7 +196,9 @@ function AllRooms() {
         <div className="flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold border border-red-200">
           <span>OCCUPIED</span>
           <span className="bg-red-800 text-white px-2 py-0.5 rounded-full text-xs">
-            {roomStatusCounts[RoomStatus.OCCUPIED] + roomStatusCounts[RoomStatus.SERVICE] + roomStatusCounts[RoomStatus.DUE_OUT]}
+            {roomStatusCounts[RoomStatus.OCCUPIED] +
+              roomStatusCounts[RoomStatus.SERVICE] +
+              roomStatusCounts[RoomStatus.DUE_OUT]}
           </span>
         </div>
         <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold border border-blue-200">
