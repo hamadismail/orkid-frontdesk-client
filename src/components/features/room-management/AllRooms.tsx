@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Hotel } from "lucide-react";
 import RoomCard from "@/src/components/features/room-management/RoomCard";
 import RoomFilter from "@/src/components/features/room-management/RoomFilter";
@@ -49,32 +49,7 @@ function AllRooms() {
     return [];
   }, [reservations]);
 
-  const filteredRooms = allRooms.filter((room: IRoom) => {
-    // Basic filters
-    const matchesFloor =
-      floorFilter === "all" || room.roomFloor.toString() === floorFilter;
-    const matchesType = typeFilter === "all" || room.roomType === typeFilter;
-    const matchesNumber =
-      roomNumberFilter === "" ||
-      room.roomNo.toLowerCase().includes(roomNumberFilter.toLowerCase());
-
-    // Status filter logic needs to be updated for the new unified model
-    let matchesStatus = statusFilter === "all";
-    if (!matchesStatus) {
-      if (statusFilter === RoomStatus.AVAILABLE)
-        matchesStatus = room.roomStatus === RoomStatus.AVAILABLE;
-      else if (statusFilter === RoomStatus.OCCUPIED)
-        matchesStatus = room.roomStatus === RoomStatus.OCCUPIED;
-      else if (statusFilter === RoomStatus.DIRTY)
-        matchesStatus = room.roomStatus === RoomStatus.DIRTY;
-      else if (statusFilter === RoomStatus.RESERVED)
-        matchesStatus = room.roomStatus === RoomStatus.RESERVED;
-    }
-
-    return matchesFloor && matchesType && matchesNumber && matchesStatus;
-  });
-
-  const getRoomInfo = (room: IRoom) => {
+  const getRoomInfo = useCallback((room: IRoom) => {
     const selectedDate = startOfDay(new Date(dateFilter));
 
     // 1. Check if there's a reservation arriving on the selected date
@@ -108,8 +83,18 @@ function AllRooms() {
     const activeRes = arrivalRes || currentRes;
     const guest = activeRes?.guestId as unknown as IGuest;
 
-    // Use Reserved status only for arrivals, otherwise use DB roomStatus (which handles Occupied)
-    const visualStatus = arrivalRes ? RoomStatus.RESERVED : room.roomStatus;
+    // Determine visual status
+    let visualStatus = room.roomStatus;
+
+    if (arrivalRes) {
+      visualStatus = RoomStatus.RESERVED;
+    } else if (currentRes) {
+      const departure = startOfDay(new Date(currentRes.stay.departure));
+      // If departure is today or in the past, mark as DUE_OUT
+      if (departure <= selectedDate) {
+        visualStatus = RoomStatus.DUE_OUT;
+      }
+    }
 
     return {
       roomStatus: visualStatus,
@@ -119,7 +104,66 @@ function AllRooms() {
       departure: activeRes ? new Date(activeRes.stay.departure) : undefined,
       reservation: activeRes,
     };
-  };
+  }, [dateFilter, allReservations]);
+
+  const roomStatusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      [RoomStatus.AVAILABLE]: 0,
+      [RoomStatus.OCCUPIED]: 0,
+      [RoomStatus.RESERVED]: 0,
+      [RoomStatus.DIRTY]: 0,
+      [RoomStatus.DUE_OUT]: 0,
+      [RoomStatus.OUT_OF_ORDER]: 0,
+      [RoomStatus.SERVICE]: 0,
+    };
+
+    allRooms.forEach((room: IRoom) => {
+      const info = getRoomInfo(room);
+      const visualStatus = info.roomStatus;
+      if (counts[visualStatus] !== undefined) {
+        counts[visualStatus]++;
+      } else {
+        counts[visualStatus] = 1;
+      }
+    });
+
+    return counts;
+  }, [allRooms, getRoomInfo]);
+
+  const filteredRooms = allRooms.filter((room: IRoom) => {
+    // Basic filters
+    const matchesFloor =
+      floorFilter === "all" || room.roomFloor.toString() === floorFilter;
+    const matchesType = typeFilter === "all" || room.roomType === typeFilter;
+    const matchesNumber =
+      roomNumberFilter === "" ||
+      room.roomNo.toLowerCase().includes(roomNumberFilter.toLowerCase());
+
+    // Status filter logic needs to be updated for the new unified model
+    let matchesStatus = statusFilter === "all";
+    if (!matchesStatus) {
+      const info = getRoomInfo(room);
+      const currentVisualStatus = info.roomStatus;
+
+      if (statusFilter === RoomStatus.AVAILABLE)
+        matchesStatus = currentVisualStatus === RoomStatus.AVAILABLE;
+      else if (statusFilter === RoomStatus.OCCUPIED)
+        matchesStatus =
+          currentVisualStatus === RoomStatus.OCCUPIED ||
+          currentVisualStatus === RoomStatus.SERVICE ||
+          currentVisualStatus === RoomStatus.DUE_OUT;
+      else if (statusFilter === RoomStatus.DIRTY)
+        matchesStatus = currentVisualStatus === RoomStatus.DIRTY;
+      else if (statusFilter === RoomStatus.RESERVED)
+        matchesStatus = currentVisualStatus === RoomStatus.RESERVED;
+      else if (statusFilter === RoomStatus.DUE_OUT)
+        matchesStatus = currentVisualStatus === RoomStatus.DUE_OUT;
+      else if (statusFilter === RoomStatus.SERVICE)
+        matchesStatus = currentVisualStatus === RoomStatus.SERVICE;
+    }
+
+    return matchesFloor && matchesType && matchesNumber && matchesStatus;
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -132,6 +176,51 @@ function AllRooms() {
         {/* ... time display ... */}
         <DateTimeClock />
         <AddRoomDialog />
+      </div>
+
+      <div className="flex flex-wrap gap-4">
+        <div className="flex items-center gap-2 bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold border border-green-200">
+          <span>AVAILABLE</span>
+          <span className="bg-green-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.AVAILABLE]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold border border-red-200">
+          <span>OCCUPIED</span>
+          <span className="bg-red-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.OCCUPIED] + roomStatusCounts[RoomStatus.SERVICE] + roomStatusCounts[RoomStatus.DUE_OUT]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold border border-blue-200">
+          <span>RESERVED</span>
+          <span className="bg-blue-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.RESERVED]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold border border-yellow-200">
+          <span>DIRTY</span>
+          <span className="bg-yellow-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.DIRTY]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold border border-orange-200">
+          <span>DUE OUT</span>
+          <span className="bg-orange-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.DUE_OUT]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm font-semibold border border-gray-200">
+          <span>OUT OF ORDER</span>
+          <span className="bg-gray-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.OUT_OF_ORDER]}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold border border-purple-200">
+          <span>SERVICE</span>
+          <span className="bg-purple-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.SERVICE]}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">

@@ -70,6 +70,12 @@ const STATUS_OPTIONS = [
     icon: Brush,
     color: "bg-orange-100 text-orange-700",
   },
+  {
+    value: RoomStatus.SERVICE,
+    label: "Service",
+    icon: User,
+    color: "bg-purple-100 text-purple-700",
+  },
 ] as const;
 
 const FLOOR_OPTIONS = [
