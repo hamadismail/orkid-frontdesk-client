@@ -216,7 +216,11 @@ function PaymentTable() {
                       <Badge variant="outline">{item.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      <PaymentModal guest={item.reservation} />
+                      <PaymentModal 
+                        reservation={item.reservation} 
+                        isGroup={item.groupName && item.groupName !== "Single Booking"}
+                        groupId={item.groupName && item.groupName !== "Single Booking" ? item._id : undefined}
+                      />
                     </TableCell>
                   </TableRow>
                 );
