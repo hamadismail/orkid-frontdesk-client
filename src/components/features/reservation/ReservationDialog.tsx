@@ -232,7 +232,7 @@ export function ReservationDialog({
             passport: guest?.passport || "",
             country: guest?.country || "",
             source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
-            refId: existingReservation.confirmationNo,
+            refId: existingReservation.refId || "",
             arrivalDate: new Date(existingReservation.stay.arrival),
             departureDate: new Date(existingReservation.stay.departure),
             rooms: [
@@ -316,7 +316,7 @@ export function ReservationDialog({
     const res = reservationData.reservations
       ? reservationData.reservations[0]
       : reservationData;
-    
+
     // If guestId or roomId is not populated (it's just a string ID), use values from form
     const guest = typeof res.guestId === 'object' ? res.guestId : {
         name: form.getValues("name"),
@@ -332,7 +332,7 @@ export function ReservationDialog({
         name: (guest as any)?.name || form.getValues("name"),
         phone: (guest as any)?.phone || form.getValues("phone"),
         source: res.source || form.getValues("source") || "-",
-        refId: res.confirmationNo || form.getValues("refId") || "-",
+        refId: res.refId || form.getValues("refId") || "-",
       },
       stay: {
         arrival: new Date(res.stay?.arrival || form.getValues("arrivalDate")),

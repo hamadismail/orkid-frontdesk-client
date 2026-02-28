@@ -73,7 +73,7 @@ const STAT_CONFIGS = {
     iconColor: "text-purple-600 dark:text-purple-400",
     // variant: "secondary" as const,
     variant: "bg-purple-500",
-    description: "Maintenance required",
+    description: "Service required",
   },
 } as const;
 

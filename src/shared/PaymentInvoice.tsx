@@ -36,8 +36,8 @@ export function PaymentInvoice({
       guest: {
         name: rawData.guestName || res.guestId?.name || "Guest",
         phone: res.guestId?.phone || "N/A",
-        source: res.source || "-",
-        refId: res.refId || "-",
+        source: res.source || rawData.source || "-",
+        refId: res.refId || rawData.refId || "-",
       },
       stay: {
         arrival: res.stay?.arrival || rawData.createdAt,

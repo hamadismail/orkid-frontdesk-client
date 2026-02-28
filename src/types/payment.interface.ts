@@ -24,7 +24,7 @@ export interface IPaymentReceiptProps {
     guest: {
       name: string;
       phone: string;
-      otas: string;
+      source: string;
       refId: string;
     };
     stay: {

@@ -92,6 +92,7 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
                             <td className="p-2">
                                 <div className="font-bold text-sm">Room {room?.roomNo} - {room?.roomType}</div>
                                 <div className="text-[10px] text-gray-500">Rate: {formatCurrency(res.rate.roomPrice)} / night</div>
+                                <div className="text-[10px] text-gray-500">Adults: {res.stay.adults}, Children: {res.stay.children}</div>
                             </td>
                             <td className="p-2 text-center">{calculateNights(res)}</td>
                             <td className="p-2 text-right font-medium">{formatCurrency(res.rate.subtotal)}</td>

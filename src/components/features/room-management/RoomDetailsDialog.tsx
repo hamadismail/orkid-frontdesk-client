@@ -63,7 +63,7 @@ const STATUS_CONFIG = {
   [RoomStatus.SERVICE]: {
     variant: "outline" as const,
     label: "Service",
-    description: "Maintenance required",
+    description: "Service required",
   },
   [RoomStatus.OUT_OF_ORDER]: {
     variant: "destructive" as const,
