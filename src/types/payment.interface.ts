@@ -12,6 +12,7 @@ export interface IPayment {
   roomNo: string;
   roomType: string;
   source?: OTAS;
+  refId?: string;
   remarks?: string;
   createdBy?: string;
   createdAt?: string;
