@@ -173,8 +173,8 @@ export function GuestDetailsDialog({
 
                 <DetailItem
                   icon={Hash}
-                  label="Confirmation No"
-                  value={selectedGuest.confirmationNo}
+                  label="Ref ID"
+                  value={selectedGuest.refId}
                 />
               </div>
             </div>

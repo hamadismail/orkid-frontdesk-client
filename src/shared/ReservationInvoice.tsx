@@ -119,6 +119,10 @@ export default function ReservationInvoice({
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                 <div className="font-medium">Group Code:</div>
                 <div>{group?.groupCode || mainRes.confirmationNo}</div>
+                <div className="font-medium">Ref ID:</div>
+                <div className="font-bold">{mainRes.refId || "-"}</div>
+                <div className="font-medium">Source:</div>
+                <div className="font-bold">{mainRes.source || "-"}</div>
                 <div className="font-medium">Name:</div>
                 <div className="font-bold uppercase">{guest?.name}</div>
                 <div className="font-medium">Phone:</div>
@@ -164,6 +168,9 @@ export default function ReservationInvoice({
                       <td className="p-2">
                         <div className="font-bold">
                           Room {room?.roomNo || "-"}
+                        </div>
+                        <div className="text-xs font-mono text-muted-foreground">
+                          ID: {res.confirmationNo}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {room?.roomType}

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -43,6 +44,7 @@ export default function CancelReservationButton({
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Cancelled successfully!");
       setOpen(false);
       onClose?.();

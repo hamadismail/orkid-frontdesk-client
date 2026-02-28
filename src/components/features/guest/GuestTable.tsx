@@ -39,6 +39,7 @@ import { useReactToPrint } from "react-to-print";
 import { Badge } from "@/src/components/ui/badge";
 import { format } from "date-fns";
 import React from "react";
+import PrintableTable from "@/src/shared/DepositReceipt";
 
 export default function GuestTable() {
   const [page, setPage] = useState(1);
@@ -46,6 +47,7 @@ export default function GuestTable() {
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isDepositReportOpen, setIsDepositReportOpen] = useState(false);
   const [reservationForInvoice, setReservationForInvoice] = useState<any>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {},
@@ -54,6 +56,12 @@ export default function GuestTable() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["reservations-guest-view", page, search],
     queryFn: () => getAllReservations({ page, search }),
+  });
+
+  const { data: checkedInReservations, isLoading: isLoadingDeposits } = useQuery({
+    queryKey: ["checked-in-reservations-for-report"],
+    queryFn: () => getAllReservations({ status: RESERVATION_STATUS.CHECKED_IN, limit: 1000 }),
+    enabled: isDepositReportOpen,
   });
 
   const allReservations = useMemo(() => {
@@ -102,10 +110,18 @@ export default function GuestTable() {
     contentRef: invoiceRef,
   });
 
+  const depositReportRef = useRef<HTMLDivElement>(null);
+  const handlePrintDepositReport = useReactToPrint({
+    contentRef: depositReportRef,
+  });
+
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Stays & Guest List</h1>
+        <Button onClick={() => setIsDepositReportOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+          <Printer className="h-4 w-4" /> Deposit Report
+        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -358,6 +374,35 @@ export default function GuestTable() {
             </Button>
             <Button onClick={() => handlePrint()}>
               <Printer className="mr-2 h-4 w-4" /> Print Invoice
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Deposit Report Dialog */}
+      <Dialog open={isDepositReportOpen} onOpenChange={setIsDepositReportOpen}>
+        <DialogContent className="min-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Deposit Report</DialogTitle>
+            <DialogDescription>
+              Current deposits for all checked-in guests.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingDeposits ? (
+              <div className="flex justify-center p-8">Loading deposits...</div>
+            ) : (
+              <PrintableTable ref={depositReportRef} deposits={checkedInReservations?.data || []} />
+            )}
+          </div>
+          <div className="flex justify-end gap-4 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsDepositReportOpen(false)}
+            >
+              Close
+            </Button>
+            <Button onClick={() => handlePrintDepositReport()} disabled={isLoadingDeposits}>
+              <Printer className="mr-2 h-4 w-4" /> Print Report
             </Button>
           </div>
         </DialogContent>

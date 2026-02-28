@@ -36,8 +36,8 @@ export function PaymentInvoice({
       guest: {
         name: rawData.guestName || res.guestId?.name || "Guest",
         phone: res.guestId?.phone || "N/A",
-        otas: res.source || "-",
-        refId: res.confirmationNo || "-",
+        source: res.source || "-",
+        refId: res.refId || "-",
       },
       stay: {
         arrival: res.stay?.arrival || rawData.createdAt,
@@ -54,7 +54,7 @@ export function PaymentInvoice({
         remarks: rawData.remarks || rawData.payment?.remarks || "",
       },
       paymentDate: rawData.createdAt || rawData.paymentDate || new Date(),
-      paymentId: rawData._id || rawData.paymentId || "N/A",
+      paymentId: res.confirmationNo || rawData._id || "N/A",
     };
   })();
 
@@ -199,7 +199,7 @@ export function PaymentInvoice({
           <div>
             <p className="text-sm font-semibold text-gray-600">Source</p>
             <p className="text-md font-semibold text-gray-800">
-              {invoiceData.guest?.otas || "-"}
+              {invoiceData.guest?.source || "-"}
             </p>
           </div>
           <div>

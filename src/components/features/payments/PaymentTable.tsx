@@ -44,7 +44,42 @@ function PaymentTable() {
     queryFn: () => getAllReservations({ page, search, status }),
   });
 
-  const reservations = useMemo(() => data?.data || [], [data]);
+  const consolidatedBookings = useMemo(() => {
+    const rawReservations = data?.data || [];
+    const groups: Record<string, any> = {};
+
+    rawReservations.forEach((res: IReservation) => {
+      // Use groupId as the key, or reservation _id if groupId is missing
+      const groupObj = res.groupId as any;
+      const groupId = typeof groupObj === 'string' ? groupObj : (groupObj?._id || res._id);
+      
+      if (!groups[groupId]) {
+        groups[groupId] = {
+          _id: groupId,
+          groupName: groupObj?.groupName || "Single Booking",
+          guest: res.guestId,
+          rooms: [],
+          totalAmount: 0,
+          paidAmount: 0,
+          dueAmount: 0,
+          status: res.status,
+          reservation: res, // Keep the first reservation for the PaymentModal
+        };
+      }
+
+      const room = res.roomId as any;
+      if (room?.roomNo) {
+        groups[groupId].rooms.push(room.roomNo);
+      }
+      
+      groups[groupId].totalAmount += res.rate.subtotal;
+      groups[groupId].paidAmount += res.payment.paidAmount;
+      groups[groupId].dueAmount += res.payment.dueAmount;
+    });
+
+    return Object.values(groups);
+  }, [data]);
+
   const meta = data?.meta || { page: 1, total: 0, limit: 10 };
   const totalPages = Math.ceil(meta.total / meta.limit);
 
@@ -98,8 +133,8 @@ function PaymentTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Guest</TableHead>
-              <TableHead>Room</TableHead>
+              <TableHead>Guest / Group</TableHead>
+              <TableHead>Rooms</TableHead>
               <TableHead>Total</TableHead>
               <TableHead>Paid</TableHead>
               <TableHead>Due</TableHead>
@@ -116,42 +151,54 @@ function PaymentTable() {
                   Error loading data
                 </TableCell>
               </TableRow>
-            ) : reservations.length === 0 ? (
+            ) : consolidatedBookings.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center">
                   No records found
                 </TableCell>
               </TableRow>
             ) : (
-              reservations.map((res: IReservation) => {
-                const guest = res.guestId as unknown as IGuest;
-                const room = res.roomId as any;
-                const isDue = res.payment.dueAmount > 0;
+              consolidatedBookings.map((item: any) => {
+                const guest = item.guest as unknown as IGuest;
+                const isDue = item.dueAmount > 0;
                 return (
-                  <TableRow key={res._id}>
+                  <TableRow key={item._id}>
                     <TableCell>
                       <div className="font-medium">{guest?.name}</div>
+                      {item.groupName && item.groupName !== "Single Booking" && (
+                        <div className="text-xs text-primary font-semibold">
+                          Group: {item.groupName}
+                        </div>
+                      )}
                       <div className="text-xs text-muted-foreground">
                         {guest?.phone}
                       </div>
                     </TableCell>
-                    <TableCell>{room?.roomNo}</TableCell>
-                    <TableCell>RM {res.rate.subtotal.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {item.rooms.map((roomNo: string) => (
+                          <Badge key={roomNo} variant="secondary" className="text-[10px] px-1 py-0">
+                            {roomNo}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>RM {item.totalAmount.toFixed(2)}</TableCell>
                     <TableCell className="text-green-600 font-medium">
-                      RM {res.payment.paidAmount.toFixed(2)}
+                      RM {item.paidAmount.toFixed(2)}
                     </TableCell>
                     <TableCell
                       className={
                         isDue ? "text-red-600 font-bold" : "text-green-600"
                       }
                     >
-                      RM {res.payment.dueAmount.toFixed(2)}
+                      RM {item.dueAmount.toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{res.status}</Badge>
+                      <Badge variant="outline">{item.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      <PaymentModal guest={res} />
+                      <PaymentModal guest={item.reservation} />
                     </TableCell>
                   </TableRow>
                 );

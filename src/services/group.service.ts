@@ -18,7 +18,8 @@ export const createGroup = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include',
   });
-  return res.json();
+  const result = await res.json();
+  return result.data;
 };
 
 export const getGroupDetails = async (id: string) => {

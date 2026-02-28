@@ -210,6 +210,11 @@ export function NewReservationDialog({
 
       if (data.isGroup) {
         // Handle Group Reservation
+        const sstValue = parseFloat(data.sst || "0");
+        const tourismTaxValue = parseFloat(data.tourismTax || "0");
+        const discountValue = parseFloat(data.discount || "0");
+        const paidAmountValue = parseFloat(data.paidAmount || "0");
+
         const payload = {
           groupData: {
             groupName: data.groupName || `${data.name}'s Group`,
@@ -217,9 +222,20 @@ export function NewReservationDialog({
             source: data.source,
             refId: data.refId,
           },
-          rooms: data.rooms.map(r => {
+          rooms: data.rooms.map((r, index) => {
             const selectedRoom = allRooms.find(room => room.roomNo === r.roomNo);
             if (!selectedRoom) throw new Error(`Room ${r.roomNo} not found`);
+
+            const roomSubtotal = parseFloat(r.roomPrice) * stayDuration;
+            let roomPaidAmount = 0;
+            let roomDueAmount = roomSubtotal;
+
+            if (index === 0) {
+              // Apply all taxes and the whole advance payment to the first room for now
+              // This ensures the total group due is correct when summed up
+              roomDueAmount = roomSubtotal + sstValue + tourismTaxValue - discountValue - paidAmountValue;
+              roomPaidAmount = paidAmountValue;
+            }
 
             return {
               ...guestData,
@@ -232,21 +248,26 @@ export function NewReservationDialog({
               },
               rate: {
                 roomPrice: parseFloat(r.roomPrice),
-                subtotal: parseFloat(r.roomPrice) * stayDuration,
+                subtotal: roomSubtotal + (index === 0 ? sstValue + tourismTaxValue - discountValue : 0),
+                sst: index === 0 ? sstValue : 0,
+                tourismTax: index === 0 ? tourismTaxValue : 0,
+                discount: index === 0 ? discountValue : 0,
               },
               payment: {
-                paidAmount: 0,
-                dueAmount: parseFloat(r.roomPrice) * stayDuration,
+                paidAmount: roomPaidAmount,
+                dueAmount: roomDueAmount,
+                paymentMethod: data.paymentMethod,
+                remarks: data.remarks,
               }
             };
           })
         };
         const response = await createGroup(payload);
-        if (response?.success) {
-          setReservationData(response.data);
+        if (response) {
+          setReservationData(response);
           return response;
         }
-        throw new Error(response?.message || "Group reservation failed");
+        throw new Error("Group reservation failed");
       } else {
         // Handle Single Reservation
         const roomInfo = data.rooms[0];
@@ -266,6 +287,9 @@ export function NewReservationDialog({
           rate: {
             roomPrice: parseFloat(roomInfo.roomPrice || "0"),
             subtotal: parseFloat(calculateTotalAmount()),
+            sst: parseFloat(data.sst || "0"),
+            tourismTax: parseFloat(data.tourismTax || "0"),
+            discount: parseFloat(data.discount || "0"),
           },
           payment: {
             paidAmount: parseFloat(data.paidAmount || "0"),
@@ -277,15 +301,16 @@ export function NewReservationDialog({
           refId: data.refId,
         };
         const response = await createReservation(payload as any);
-        if (response?.success) {
-          setReservationData(response.data);
+        if (response) {
+          setReservationData(response);
           return response;
         }
-        throw new Error(response?.message || "Reservation failed");
+        throw new Error("Reservation failed");
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Reservation confirmed");
       setStep(4);
     },
@@ -361,7 +386,7 @@ export function NewReservationDialog({
   };
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl p-0 overflow-auto max-h-148">
+      <DialogContent className="sm:max-w-4xl p-0 overflow-auto max-h-148">
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <div className="flex items-center justify-between">
@@ -1038,19 +1063,49 @@ export function NewReservationDialog({
                               <span>{stayDuration} nights</span>
                             </div>
                             <div className="space-y-2">
-                                <span className="text-xs text-muted-foreground">Rooms</span>
+                                <span className="text-xs text-muted-foreground font-semibold">Rooms</span>
                                 {form.watch("rooms").map((r, idx) => (
-                                    <div key={idx} className="flex justify-between text-sm">
+                                    <div key={idx} className="flex justify-between text-sm pl-2">
                                         <span>{r.roomNo || "Not selected"} ({r.roomType})</span>
                                         <span>RM {parseFloat(r.roomPrice || "0").toFixed(2)} x {stayDuration}</span>
                                     </div>
                                 ))}
                             </div>
                             <Separator />
-                            {/* ... existing taxes ... */}
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span>RM {(parseFloat(calculateTotalAmount()) - parseFloat(form.watch("sst") || "0") - parseFloat(form.watch("tourismTax") || "0")).toFixed(2)}</span>
+                            </div>
+                            {parseFloat(form.watch("sst") || "0") > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">SST</span>
+                                    <span>RM {parseFloat(form.watch("sst") || "0").toFixed(2)}</span>
+                                </div>
+                            )}
+                            {parseFloat(form.watch("tourismTax") || "0") > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Tourism Tax</span>
+                                    <span>RM {parseFloat(form.watch("tourismTax") || "0").toFixed(2)}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between font-medium">
                               <span>Total Amount</span>
                               <span>RM {calculateTotalAmount()}</span>
+                            </div>
+                            {parseFloat(form.watch("discount") || "0") > 0 && (
+                                <div className="flex justify-between text-sm text-green-600">
+                                    <span>Discount</span>
+                                    <span>- RM {parseFloat(form.watch("discount") || "0").toFixed(2)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between text-sm font-semibold text-primary">
+                              <span>Advance Payment</span>
+                              <span>RM {parseFloat(form.watch("paidAmount") || "0").toFixed(2)}</span>
+                            </div>
+                            <Separator className="h-0.5 bg-primary/20" />
+                            <div className="flex justify-between font-bold text-lg text-destructive">
+                              <span>Balance Due</span>
+                              <span>RM {calculateDueAmount()}</span>
                             </div>
                           </CardContent>
                         </Card>
