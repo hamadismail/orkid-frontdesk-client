@@ -220,7 +220,7 @@ export function ReservationDialog({
               : room && room._id === existingReservation.roomId
                 ? room
                 : null;
-    
+
           form.reset({
             isGroup:
               !!existingReservation.groupId &&
@@ -316,34 +316,42 @@ export function ReservationDialog({
     const res = reservationData.reservations
       ? reservationData.reservations[0]
       : reservationData;
-    const guest = res.guestId as unknown as IGuest;
-    const room = res.roomId as any;
+    
+    // If guestId or roomId is not populated (it's just a string ID), use values from form
+    const guest = typeof res.guestId === 'object' ? res.guestId : {
+        name: form.getValues("name"),
+        phone: form.getValues("phone"),
+    };
+    const room = typeof res.roomId === 'object' ? res.roomId : {
+        roomNo: form.getValues("rooms")[0]?.roomNo || "-",
+        roomType: form.getValues("rooms")[0]?.roomType || "-",
+    };
 
     return {
       guest: {
-        name: guest?.name || "",
-        phone: guest?.phone || "",
-        otas: res.source || "",
-        refId: res.confirmationNo || "",
+        name: (guest as any)?.name || form.getValues("name"),
+        phone: (guest as any)?.phone || form.getValues("phone"),
+        source: res.source || form.getValues("source") || "-",
+        refId: res.confirmationNo || form.getValues("refId") || "-",
       },
       stay: {
-        arrival: new Date(res.stay.arrival),
-        departure: new Date(res.stay.departure),
+        arrival: new Date(res.stay?.arrival || form.getValues("arrivalDate")),
+        departure: new Date(res.stay?.departure || form.getValues("departureDate")),
       },
       room: {
-        number: room?.roomNo || "",
-        type: room?.roomType || "",
+        number: (room as any)?.roomNo || form.getValues("rooms")[0]?.roomNo || "-",
+        type: (room as any)?.roomType || form.getValues("rooms")[0]?.roomType || "-",
       },
       payment: {
-        paidAmount: res.payment.paidAmount || 0,
+        paidAmount: res.payment?.paidAmount || parseFloat(form.getValues("paidAmount") || "0"),
         deposit: 0,
-        method: res.payment.paymentMethod || "",
-        remarks: res.payment.remarks,
+        method: res.payment?.paymentMethod || form.getValues("paymentMethod"),
+        remarks: res.payment?.remarks || form.getValues("remarks"),
       },
       paymentDate: new Date(),
       paymentId: res._id?.toUpperCase(),
     };
-  }, [reservationData]);
+  }, [reservationData, form]);
 
   const { mutate: processReservation, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {
@@ -372,7 +380,7 @@ export function ReservationDialog({
       const status =
         mode === "checkin"
           ? RESERVATION_STATUS.CHECKED_IN
-          : RESERVATION_STATUS.CONFIRMED;
+          : RESERVATION_STATUS.RESERVED;
 
       if (data.isGroup) {
         // Handle Group Reservation

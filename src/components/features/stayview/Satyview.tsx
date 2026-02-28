@@ -16,7 +16,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  BedDouble,
   CalendarDays,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";

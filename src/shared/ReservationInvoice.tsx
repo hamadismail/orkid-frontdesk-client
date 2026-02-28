@@ -161,19 +161,23 @@ export default function ReservationInvoice({
               </thead>
               <tbody>
                 {reservations.map((res, idx) => {
-                  const room = res.roomId as any;
+                  // Fallback if roomId is not populated
+                  const room = typeof res.roomId === 'object' ? res.roomId : null;
+                  const roomNo = (room as any)?.roomNo || "-";
+                  const roomType = (room as any)?.roomType || "-";
+                  
                   const nights = calculateNights(res);
                   return (
                     <tr key={idx} className="border-b last:border-0">
                       <td className="p-2">
                         <div className="font-bold">
-                          Room {room?.roomNo || "-"}
+                          Room {roomNo}
                         </div>
                         <div className="text-xs font-mono text-muted-foreground">
                           ID: {res.confirmationNo}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {room?.roomType}
+                          {roomType} | Adults: {res.stay.adults}, Children: {res.stay.children}
                         </div>
                       </td>
                       <td className="p-2 text-center">{nights}</td>
