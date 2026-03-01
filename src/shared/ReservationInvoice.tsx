@@ -51,8 +51,8 @@ export default function ReservationInvoice({
       : [bookingInfo];
 
   const mainRes = reservations[0];
-  const guest = mainRes.guestId as unknown as IGuest;
-  const group = mainRes.groupId as any;
+  const guest = typeof mainRes.guestId === 'object' ? (mainRes.guestId as unknown as IGuest) : null;
+  const group = typeof mainRes.groupId === 'object' ? (mainRes.groupId as any) : null;
 
   const calculateNights = (res: IReservation) => {
     return Math.max(
@@ -124,9 +124,9 @@ export default function ReservationInvoice({
                 <div className="font-medium">Source:</div>
                 <div className="font-bold">{mainRes.source || "-"}</div>
                 <div className="font-medium">Name:</div>
-                <div className="font-bold uppercase">{guest?.name}</div>
+                <div className="font-bold uppercase">{guest?.name || "GUEST"}</div>
                 <div className="font-medium">Phone:</div>
-                <div>{guest?.phone}</div>
+                <div>{guest?.phone || "-"}</div>
               </div>
             </div>
 

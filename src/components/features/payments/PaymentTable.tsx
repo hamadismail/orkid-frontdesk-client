@@ -41,7 +41,7 @@ function PaymentTable() {
   const [dueOnly, setDueOnly] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations-payment", page, search, status, dueOnly],
+    queryKey: ["reservations", "payment", page, search, status, dueOnly],
     queryFn: () =>
       getAllReservations({
         page,

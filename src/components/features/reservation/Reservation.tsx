@@ -25,7 +25,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/src/components/ui/dialog";
-import { ChevronDown, ChevronRight, Printer, CalendarCheck, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Printer,
+  CalendarCheck,
+  Loader2,
+} from "lucide-react";
 import ReservationInvoice from "@/src/shared/ReservationInvoice";
 import { getAllReservations } from "@/src/services/reservation.service";
 import { IReservationGroup } from "@/src/types/group.interface";
@@ -44,11 +50,13 @@ export default function Reservation() {
   const [selectedReservationForPrint, setSelectedReservationForPrint] =
     useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  );
 
   const { data, isLoading } = useQuery({
     queryKey: ["reservations"],
-    queryFn: () => getAllReservations({ status: RESERVATION_STATUS.RESERVED }),
+    queryFn: () => getAllReservations(),
   });
 
   const { mutate: performBatchCheckIn, isPending: isCheckingIn } = useMutation({
@@ -67,7 +75,8 @@ export default function Reservation() {
     if (!data) return [];
     if (Array.isArray(data)) return data;
     if (data.data && Array.isArray(data.data)) return data.data;
-    if (data.data && data.data.data && Array.isArray(data.data.data)) return data.data.data;
+    if (data.data && data.data.data && Array.isArray(data.data.data))
+      return data.data.data;
     return [];
   }, [data]);
 
@@ -95,31 +104,34 @@ export default function Reservation() {
     if (!Array.isArray(allReservations)) return groups;
 
     allReservations.forEach((res: any) => {
-        const groupId = typeof res.groupId === 'object' ? res.groupId._id : res.groupId;
-        if (!groups[groupId]) groups[groupId] = [];
-        groups[groupId].push(res);
+      const groupId =
+        typeof res.groupId === "object" ? res.groupId._id : res.groupId;
+      if (!groups[groupId]) groups[groupId] = [];
+      groups[groupId].push(res);
     });
     return groups;
   }, [allReservations]);
 
   const toggleGroup = (groupId: string) => {
-    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+    setExpandedGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
   };
 
   const filteredGroups = useMemo(() => {
     const lowerCaseQuery = searchQuery.toLowerCase();
     if (!lowerCaseQuery) return Object.entries(groupedReservations);
 
-    return Object.entries(groupedReservations).filter(([_groupId, reservations]) => {
+    return Object.entries(groupedReservations).filter(
+      ([_groupId, reservations]) => {
         return reservations.some((res: any) => {
-            const guest = res.guestId as unknown as IGuest;
-            return (
-                res.confirmationNo.toLowerCase().includes(lowerCaseQuery) ||
-                guest?.name.toLowerCase().includes(lowerCaseQuery) ||
-                guest?.phone.toLowerCase().includes(lowerCaseQuery)
-            );
+          const guest = res.guestId as unknown as IGuest;
+          return (
+            res.confirmationNo.toLowerCase().includes(lowerCaseQuery) ||
+            guest?.name.toLowerCase().includes(lowerCaseQuery) ||
+            guest?.phone.toLowerCase().includes(lowerCaseQuery)
+          );
         });
-    });
+      },
+    );
   }, [groupedReservations, searchQuery]);
 
   return (
@@ -156,82 +168,139 @@ export default function Reservation() {
               <TableSkeleton rows={10} columns={6} />
             ) : (
               filteredGroups.map(([groupId, reservations]) => {
-                const group = (reservations[0] as any).groupId as IReservationGroup;
+                const group = (reservations[0] as any)
+                  .groupId as IReservationGroup;
                 const isExpanded = expandedGroups[groupId];
                 const isSingle = reservations.length === 1;
-                const canGroupCheckIn = !isSingle && reservations.some(r => r.status === RESERVATION_STATUS.CONFIRMED || r.status === RESERVATION_STATUS.RESERVED);
+                const canGroupCheckIn =
+                  !isSingle &&
+                  reservations.some(
+                    (r) =>
+                      r.status === RESERVATION_STATUS.CONFIRMED ||
+                      r.status === RESERVATION_STATUS.RESERVED,
+                  );
 
                 return (
                   <React.Fragment key={groupId}>
                     <TableRow
                       className="cursor-pointer font-medium bg-muted/20"
-                      onClick={() => isSingle ? handleRowClick(reservations[0]) : toggleGroup(groupId)}
+                      onClick={() =>
+                        isSingle
+                          ? handleRowClick(reservations[0])
+                          : toggleGroup(groupId)
+                      }
                     >
                       <TableCell className="flex items-center gap-2">
-                        {!isSingle && (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
-                        {isSingle ? reservations[0].confirmationNo : group?.groupCode}
+                        {!isSingle &&
+                          (isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          ))}
+                        {isSingle
+                          ? reservations[0].confirmationNo
+                          : group?.groupCode}
                       </TableCell>
                       <TableCell>
-                        {isSingle ? (reservations[0].guestId as unknown as IGuest).name : group?.groupName}
-                        {!isSingle && <Badge className="ml-2">{reservations.length} Rooms</Badge>}
+                        {isSingle
+                          ? (reservations[0].guestId as unknown as IGuest).name
+                          : group?.groupName}
+                        {!isSingle && (
+                          <Badge className="ml-2">
+                            {reservations.length} Rooms
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         {format(new Date(reservations[0].stay.arrival), "PPP")}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(reservations[0].stay.departure), "PPP")}
+                        {format(
+                          new Date(reservations[0].stay.departure),
+                          "PPP",
+                        )}
                       </TableCell>
                       <TableCell>{reservations[0].source || "-"}</TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex justify-end gap-2">
-                            {canGroupCheckIn && (
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 gap-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                                    onClick={() => performBatchCheckIn(groupId)}
-                                    disabled={isCheckingIn}
-                                >
-                                    {isCheckingIn ? <Loader2 className="h-3 w-3 animate-spin" /> : <CalendarCheck className="h-3 w-3" />}
-                                    Group Check-In
-                                </Button>
-                            )}
+                          {canGroupCheckIn && (
                             <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              onClick={() => handlePrintClick(isSingle ? reservations[0] : reservations)}
+                              size="sm"
+                              variant="outline"
+                              className="h-8 gap-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                              onClick={() => performBatchCheckIn(groupId)}
+                              disabled={isCheckingIn}
                             >
-                              <Printer className="h-4 w-4" />
+                              {isCheckingIn ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <CalendarCheck className="h-3 w-3" />
+                              )}
+                              Group Check-In
                             </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={() =>
+                              handlePrintClick(
+                                isSingle ? reservations[0] : reservations,
+                              )
+                            }
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
-                    {!isSingle && isExpanded && reservations.map((res) => (
-                      <TableRow
-                        key={res._id}
-                        className="bg-muted/5 hover:bg-muted/10"
-                        onClick={() => handleRowClick(res)}
-                      >
-                        <TableCell className="pl-10 text-xs font-normal">{res.confirmationNo}</TableCell>
-                        <TableCell className="text-xs font-normal">{(res.guestId as unknown as IGuest).name}</TableCell>
-                        <TableCell className="text-xs font-normal">
-                          {format(new Date(res.stay.arrival), "PP")}
-                        </TableCell>
-                        <TableCell className="text-xs font-normal">
-                          {format(new Date(res.stay.departure), "PP")}
-                        </TableCell>
-                        <TableCell className="text-xs font-normal">{(res.roomId as any)?.roomNo} ({(res.roomId as any)?.roomType})</TableCell>
-                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                           <div className="flex justify-end items-center gap-2">
-                                <Badge variant="outline" className="text-[10px]">{res.status}</Badge>
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handlePrintClick(res)}>
-                                    <Printer className="h-3 w-3" />
-                                </Button>
-                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {!isSingle &&
+                      isExpanded &&
+                      reservations.map((res) => (
+                        <TableRow
+                          key={res._id}
+                          className="bg-muted/5 hover:bg-muted/10"
+                          onClick={() => handleRowClick(res)}
+                        >
+                          <TableCell className="pl-10 text-xs font-normal">
+                            {res.confirmationNo}
+                          </TableCell>
+                          <TableCell className="text-xs font-normal">
+                            {(res.guestId as unknown as IGuest).name}
+                          </TableCell>
+                          <TableCell className="text-xs font-normal">
+                            {format(new Date(res.stay.arrival), "PP")}
+                          </TableCell>
+                          <TableCell className="text-xs font-normal">
+                            {format(new Date(res.stay.departure), "PP")}
+                          </TableCell>
+                          <TableCell className="text-xs font-normal">
+                            {(res.roomId as any)?.roomNo} (
+                            {(res.roomId as any)?.roomType})
+                          </TableCell>
+                          <TableCell
+                            className="text-right"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="flex justify-end items-center gap-2">
+                              <Badge variant="outline" className="text-[10px]">
+                                {res.status}
+                              </Badge>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7"
+                                onClick={() => handlePrintClick(res)}
+                              >
+                                <Printer className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                   </React.Fragment>
                 );
               })

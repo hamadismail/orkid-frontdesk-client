@@ -73,7 +73,7 @@ export default function GuestTable() {
   };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations-guest-view", page, search, status, sortBy, arrivalDate],
+    queryKey: ["reservations", "guest-view", page, search, status, sortBy, arrivalDate],
     queryFn: () => getAllReservations({
       page,
       search,
@@ -85,7 +85,7 @@ export default function GuestTable() {
   });
 
   const { data: checkedInReservations, isLoading: isLoadingDeposits } = useQuery({
-    queryKey: ["checked-in-reservations-for-report"],
+    queryKey: ["reservations", "checked-in-report"],
     queryFn: () => getAllReservations({ status: RESERVATION_STATUS.CHECKED_IN, limit: 1000 }),
     enabled: isDepositReportOpen,
   });

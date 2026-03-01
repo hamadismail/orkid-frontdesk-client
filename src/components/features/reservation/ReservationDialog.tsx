@@ -328,16 +328,23 @@ export function ReservationDialog({
     const res = reservationData.reservations
       ? reservationData.reservations[0]
       : reservationData;
+    const groupReservations = reservationData.reservations || [];
 
     // If guestId or roomId is not populated (it's just a string ID), use values from form
-    const guest = typeof res.guestId === 'object' ? res.guestId : {
-        name: form.getValues("name"),
-        phone: form.getValues("phone"),
-    };
-    const room = typeof res.roomId === 'object' ? res.roomId : {
-        roomNo: form.getValues("rooms")[0]?.roomNo || "-",
-        roomType: form.getValues("rooms")[0]?.roomType || "-",
-    };
+    const guest =
+      typeof res.guestId === "object"
+        ? res.guestId
+        : {
+            name: form.getValues("name"),
+            phone: form.getValues("phone"),
+          };
+    const room =
+      typeof res.roomId === "object"
+        ? res.roomId
+        : {
+            roomNo: form.getValues("rooms")[0]?.roomNo || "-",
+            roomType: form.getValues("rooms")[0]?.roomType || "-",
+          };
 
     return {
       guest: {
@@ -348,22 +355,49 @@ export function ReservationDialog({
       },
       stay: {
         arrival: new Date(res.stay?.arrival || form.getValues("arrivalDate")),
-        departure: new Date(res.stay?.departure || form.getValues("departureDate")),
+        departure: new Date(
+          res.stay?.departure || form.getValues("departureDate"),
+        ),
       },
       room: {
-        number: (room as any)?.roomNo || form.getValues("rooms")[0]?.roomNo || "-",
-        type: (room as any)?.roomType || form.getValues("rooms")[0]?.roomType || "-",
+        number:
+          (room as any)?.roomNo || form.getValues("rooms")[0]?.roomNo || "-",
+        type:
+          (room as any)?.roomType ||
+          form.getValues("rooms")[0]?.roomType ||
+          "-",
       },
+      groupReservations: groupReservations.map((gr: any) => {
+        // Try to find the matching room in the form to get the roomNo
+        const formRoom = form.getValues("rooms").find((r: any) => {
+            // Compare by roomNo if available in both
+            if (gr.roomNo && r.roomNo) return gr.roomNo === r.roomNo;
+            // Otherwise compare by roomId if gr.roomId is a string
+            return typeof gr.roomId === 'string' && allRooms.find(ar => ar._id === gr.roomId)?.roomNo === r.roomNo;
+        });
+
+        return {
+          roomNo: gr.roomId?.roomNo || gr.roomNo || formRoom?.roomNo || "-",
+          roomType: gr.roomId?.roomType || gr.roomType || formRoom?.roomType || "-",
+          arrival: gr.stay?.arrival || form.getValues("arrivalDate"),
+          departure: gr.stay?.departure || form.getValues("departureDate"),
+          guestName: (guest as any)?.name || form.getValues("name"),
+        };
+      }),
       payment: {
-        paidAmount: res.payment?.paidAmount || parseFloat(form.getValues("paidAmount") || "0"),
-        deposit: res.payment?.deposit || parseFloat(form.getValues("depositAmount") || "0"),
+        paidAmount:
+          res.payment?.paidAmount ||
+          parseFloat(form.getValues("paidAmount") || "0"),
+        deposit:
+          res.payment?.deposit ||
+          parseFloat(form.getValues("depositAmount") || "0"),
         method: res.payment?.paymentMethod || form.getValues("paymentMethod"),
         remarks: res.payment?.remarks || form.getValues("remarks"),
       },
       paymentDate: new Date(),
-      paymentId: res._id?.toUpperCase(),
+      paymentId: res._id?.toString().toUpperCase(),
     };
-  }, [reservationData, form]);
+  }, [reservationData, form, allRooms]);
 
   const { mutate: processReservation, isPending } = useMutation({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {

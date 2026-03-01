@@ -38,13 +38,13 @@ export default function PaymentModal({
   const [method, setMethod] = useState(PAYMENT_METHOD.CASH);
 
   const { data: groupData, isLoading: isLoadingGroup } = useQuery({
-    queryKey: ["group-reservations", groupId],
+    queryKey: ["reservations", "group", groupId],
     queryFn: () => getGroupDetails(groupId as string),
     enabled: !!groupId && isGroup && open,
   });
 
   const { data: currentReservation, isLoading: isLoadingSingle } = useQuery<IReservation>({
-    queryKey: ["reservation", reservation?._id],
+    queryKey: ["reservations", reservation?._id],
     queryFn: async () => {
       const { data } = await axios.get(`/reservations/${reservation._id}`);
       return data.data;
@@ -106,9 +106,9 @@ export default function PaymentModal({
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
-      queryClient.invalidateQueries({ queryKey: ["reservations-payment"] });
-      queryClient.invalidateQueries({ queryKey: ["reservation", reservation?._id] });
-      if (groupId) queryClient.invalidateQueries({ queryKey: ["group-reservations", groupId] });
+      queryClient.invalidateQueries({ queryKey: ["reservations", "payment"] });
+      queryClient.invalidateQueries({ queryKey: ["reservations", reservation?._id] });
+      if (groupId) queryClient.invalidateQueries({ queryKey: ["reservations", "group", groupId] });
       
       toast.success("Payment recorded successfully");
       setOpen(false);
