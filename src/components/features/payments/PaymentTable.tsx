@@ -37,12 +37,18 @@ import { RESERVATION_STATUS } from "@/src/types/enums";
 function PaymentTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>(RESERVATION_STATUS.CHECKED_IN);
+  const [status, setStatus] = useState<string>("");
   const [dueOnly, setDueOnly] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["reservations-payment", page, search, status, dueOnly],
-    queryFn: () => getAllReservations({ page, search, status, due: dueOnly }),
+    queryFn: () =>
+      getAllReservations({
+        page,
+        search,
+        status: status === "ALL" || !status ? undefined : status,
+        due: dueOnly,
+      }),
   });
 
   const consolidatedBookings = useMemo(() => {
@@ -119,6 +125,7 @@ function PaymentTable() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="ALL">All Status</SelectItem>
               <SelectItem value={RESERVATION_STATUS.CHECKED_IN}>
                 Checked In
               </SelectItem>
