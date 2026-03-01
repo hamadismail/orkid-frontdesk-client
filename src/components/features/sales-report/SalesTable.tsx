@@ -54,6 +54,21 @@ const columns: ColumnDef<IPayment>[] = [
   {
     accessorKey: "roomNo",
     header: "Room No.",
+    cell: ({ row }) => {
+      const payment = row.original;
+      const group = payment.groupId as any;
+      const isGroup = group?.groupName && group.groupName !== "Single Booking";
+      return (
+        <div>
+          <div>{payment.roomNo}</div>
+          {isGroup && (
+            <div className="text-[10px] text-primary font-bold">
+              {group.groupName}
+            </div>
+          )}
+        </div>
+      );
+    },
   },
   {
     accessorKey: "createdAt",

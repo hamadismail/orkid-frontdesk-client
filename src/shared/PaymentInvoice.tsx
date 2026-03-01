@@ -32,6 +32,8 @@ export function PaymentInvoice({
     // If it's a flat IPayment object (from backend response)
     // We try to reconstruct the nested format
     const res = rawData.reservationId || {};
+    const groupReservations = rawData.groupReservations || [];
+
     return {
       guest: {
         name: rawData.guestName || res.guestId?.name || "Guest",
@@ -47,6 +49,13 @@ export function PaymentInvoice({
         number: rawData.roomNo || res.roomId?.roomNo || "-",
         type: rawData.roomType || res.roomId?.roomType || "-",
       },
+      groupReservations: groupReservations.map((gr: any) => ({
+        roomNo: gr.roomId?.roomNo,
+        roomType: gr.roomId?.roomType,
+        arrival: gr.stay?.arrival,
+        departure: gr.stay?.departure,
+        guestName: gr.guestId?.name,
+      })),
       payment: {
         paidAmount: rawData.amount || rawData.payment?.paidAmount || 0,
         deposit: rawData.payment?.deposit || 0,
@@ -192,9 +201,22 @@ export function PaymentInvoice({
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-600">Room Details</p>
-            <p className="text-md font-semibold text-gray-800">
-              {invoiceData.room?.number} - {invoiceData.room?.type}
-            </p>
+            {invoiceData.groupReservations &&
+            invoiceData.groupReservations.length > 0 ? (
+              <div className="text-xs font-semibold text-gray-800">
+               {"Payment For - "}
+                {invoiceData.groupReservations.map((gr: any, idx: number) => (
+                  <span key={idx}>
+                    {gr.roomNo}
+                    {idx < invoiceData.groupReservations.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-md font-semibold text-gray-800">
+                {invoiceData.room?.number} - {invoiceData.room?.type}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-sm font-semibold text-gray-600">Source</p>
