@@ -1106,8 +1106,6 @@ export function ReservationDialog({
                                             const isSelectable =
                                               room.roomStatus ===
                                                 RoomStatus.AVAILABLE ||
-                                              room.roomStatus ===
-                                                RoomStatus.RESERVED ||
                                               room.roomNo ===
                                                 form.watch(
                                                   `rooms.${index}.roomNo`,
