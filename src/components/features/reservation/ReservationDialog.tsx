@@ -16,6 +16,7 @@ import {
   OTAS,
   PAYMENT_METHOD,
   RESERVATION_STATUS,
+  RoomStatus,
   RoomType,
 } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
@@ -237,7 +238,10 @@ export function ReservationDialog({
             country: guest?.country || "",
             source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
             refId: existingReservation.refId || "",
-            arrivalDate: new Date(existingReservation.stay.arrival),
+            arrivalDate:
+              mode === "checkin"
+                ? new Date()
+                : new Date(existingReservation.stay.arrival),
             departureDate: new Date(existingReservation.stay.departure),
             rooms: [
               {
@@ -272,7 +276,7 @@ export function ReservationDialog({
         }
     }
     prevOpen.current = isOpen;
-  }, [existingReservation, isOpen, room, form, handleReset]);
+  }, [existingReservation, isOpen, room, form, handleReset, mode]);
 
   // 2. Field Array
   const { fields, append, remove } = useFieldArray({
@@ -926,14 +930,31 @@ export function ReservationDialog({
                                     to: departureDate,
                                   }}
                                   onSelect={(range) => {
-                                    form.setValue(
-                                      "arrivalDate",
-                                      range?.from as Date,
-                                    );
-                                    form.setValue(
-                                      "departureDate",
-                                      range?.to as Date,
-                                    );
+                                    if (mode === "checkin") {
+                                      // If in checkin mode, keep arrivalDate as current
+                                      // and set departureDate to whatever was selected
+                                      if (range?.to) {
+                                        form.setValue(
+                                          "departureDate",
+                                          range.to,
+                                        );
+                                      } else if (range?.from) {
+                                        // If they clicked a single date, treat it as departure
+                                        // unless it's the same as arrival
+                                        if (format(range.from, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) {
+                                            form.setValue("departureDate", range.from);
+                                        }
+                                      }
+                                    } else {
+                                      form.setValue(
+                                        "arrivalDate",
+                                        range?.from as Date,
+                                      );
+                                      form.setValue(
+                                        "departureDate",
+                                        range?.to as Date,
+                                      );
+                                    }
                                   }}
                                   disabled={(date) =>
                                     date <
@@ -1073,21 +1094,59 @@ export function ReservationDialog({
                                       </FormControl>
                                       <SelectContent>
                                         {allRooms
-                                          .filter(
-                                            (r) =>
+                                          .filter((r) => {
+                                            return (
                                               r.roomType ===
                                               form.watch(
                                                 `rooms.${index}.roomType`,
-                                              ),
-                                          )
-                                          .map((room) => (
-                                            <SelectItem
-                                              key={room._id}
-                                              value={room.roomNo}
-                                            >
-                                              {room.roomNo}
-                                            </SelectItem>
-                                          ))}
+                                              )
+                                            );
+                                          })
+                                          .map((room) => {
+                                            const isSelectable =
+                                              room.roomStatus ===
+                                                RoomStatus.AVAILABLE ||
+                                              room.roomStatus ===
+                                                RoomStatus.RESERVED ||
+                                              room.roomNo ===
+                                                form.watch(
+                                                  `rooms.${index}.roomNo`,
+                                                );
+
+                                            return (
+                                              <SelectItem
+                                                key={room._id}
+                                                value={room.roomNo}
+                                                disabled={!isSelectable}
+                                              >
+                                                <div className="flex items-center justify-between w-full gap-4">
+                                                  <span
+                                                    className={cn(
+                                                      !isSelectable &&
+                                                        "text-muted-foreground line-through opacity-50",
+                                                    )}
+                                                  >
+                                                    {room.roomNo}
+                                                  </span>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                      "text-[10px] px-1 py-0 h-4",
+                                                      room.roomStatus ===
+                                                        RoomStatus.AVAILABLE
+                                                        ? "text-green-600 border-green-200 bg-green-50"
+                                                        : room.roomStatus ===
+                                                            RoomStatus.RESERVED
+                                                          ? "text-blue-600 border-blue-200 bg-blue-50"
+                                                          : "text-red-600 border-red-200 bg-red-50",
+                                                    )}
+                                                  >
+                                                    {room.roomStatus}
+                                                  </Badge>
+                                                </div>
+                                              </SelectItem>
+                                            );
+                                          })}
                                       </SelectContent>
                                     </Select>
                                     <FormMessage />
