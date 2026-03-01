@@ -37,6 +37,8 @@ export const reservationSchema = z.object({
   // Payment Info (shared for group or for single)
   paidAmount: z.string().optional(),
   paymentMethod: z.enum(Object.values(PAYMENT_METHOD) as [string, ...string[]]).optional(),
+  depositAmount: z.string().optional(),
+  depositMethod: z.enum(Object.values(PAYMENT_METHOD) as [string, ...string[]]).optional(),
   sst: z.string().optional(),
   tourismTax: z.string().optional(),
   discount: z.string().optional(),

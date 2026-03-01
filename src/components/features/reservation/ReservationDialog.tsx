@@ -155,6 +155,8 @@ export function ReservationDialog({
       roomPrice: "0",
       paidAmount: "",
       paymentMethod: PAYMENT_METHOD.CASH,
+      depositAmount: "",
+      depositMethod: PAYMENT_METHOD.CASH,
       sst: "",
       tourismTax: "",
       discount: "",
@@ -197,6 +199,8 @@ export function ReservationDialog({
       roomPrice: "0",
       paidAmount: "",
       paymentMethod: PAYMENT_METHOD.CASH,
+      depositAmount: "",
+      depositMethod: PAYMENT_METHOD.CASH,
       sst: "",
       tourismTax: "",
       discount: "",
@@ -247,6 +251,10 @@ export function ReservationDialog({
             paidAmount: existingReservation.payment.paidAmount.toString(),
             paymentMethod:
               (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
+              PAYMENT_METHOD.CASH,
+            depositAmount: existingReservation.payment.deposit?.toString() || "",
+            depositMethod:
+              (existingReservation.payment.depositMethod as PAYMENT_METHOD) ||
               PAYMENT_METHOD.CASH,
             remarks: existingReservation.payment.remarks || "",
             sst: existingReservation.rate.sst?.toString() || "",
@@ -344,7 +352,7 @@ export function ReservationDialog({
       },
       payment: {
         paidAmount: res.payment?.paidAmount || parseFloat(form.getValues("paidAmount") || "0"),
-        deposit: 0,
+        deposit: res.payment?.deposit || parseFloat(form.getValues("depositAmount") || "0"),
         method: res.payment?.paymentMethod || form.getValues("paymentMethod"),
         remarks: res.payment?.remarks || form.getValues("remarks"),
       },
@@ -357,7 +365,22 @@ export function ReservationDialog({
     mutationFn: async (data: z.infer<typeof reservationSchema>) => {
       // If we are checking in an EXISTING reservation
       if (mode === "checkin" && existingReservation?._id) {
-        const response = await checkInReservation(existingReservation._id);
+        const payload = {
+          refId: data.refId,
+          source: data.source,
+          payment: {
+            paidAmount: parseFloat(data.paidAmount || "0") || 0,
+            dueAmount: parseFloat(calculateDueAmount()) || 0,
+            deposit: parseFloat(data.depositAmount || "0") || 0,
+            depositMethod: data.depositMethod,
+            paymentMethod: data.paymentMethod,
+            remarks: data.remarks,
+          },
+        };
+        const response = await checkInReservation(
+          existingReservation._id,
+          payload,
+        );
         if (response) {
           setReservationData(response);
           return response;
@@ -442,6 +465,8 @@ export function ReservationDialog({
               payment: {
                 paidAmount: roomPaidAmount,
                 dueAmount: roomDueAmount,
+                deposit: parseFloat(data.depositAmount || "0") || 0,
+                depositMethod: data.depositMethod,
                 paymentMethod: data.paymentMethod,
                 remarks: data.remarks,
               },
@@ -480,6 +505,8 @@ export function ReservationDialog({
           payment: {
             paidAmount: parseFloat(data.paidAmount || "0") || 0,
             dueAmount: parseFloat(calculateDueAmount()) || 0,
+            deposit: parseFloat(data.depositAmount || "0") || 0,
+            depositMethod: data.depositMethod,
             paymentMethod: data.paymentMethod,
             remarks: data.remarks,
           },
@@ -1078,9 +1105,9 @@ export function ReservationDialog({
                                     </FormLabel>
                                     <FormControl>
                                       <Input
-                                        type="number"
                                         {...field}
-                                        className="h-9"
+                                        value={field.value ?? ""}
+                                        className="h-10"
                                       />
                                     </FormControl>
                                     <FormMessage />
@@ -1170,9 +1197,63 @@ export function ReservationDialog({
                                   <Input
                                     type="number"
                                     {...field}
+                                    value={field.value ?? ""}
                                     className="h-10"
                                   />
                                 </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control as any}
+                            name="depositAmount"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <DollarSign className="h-4 w-4" />
+                                  Deposit Amount
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    value={field.value ?? ""}
+                                    className="h-10"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control as any}
+                            name="depositMethod"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                  <CreditCard className="h-4 w-4" />
+                                  Deposit Method
+                                </FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  value={field.value}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger className="h-10 w-full">
+                                      <SelectValue placeholder="Select Method" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {Object.values(PAYMENT_METHOD).map((method) => (
+                                      <SelectItem key={method} value={method}>
+                                        {method}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -1191,6 +1272,7 @@ export function ReservationDialog({
                                   <Input
                                     type="number"
                                     {...field}
+                                    value={field.value ?? ""}
                                     className="h-10"
                                   />
                                 </FormControl>
@@ -1212,6 +1294,7 @@ export function ReservationDialog({
                                   <Input
                                     type="number"
                                     {...field}
+                                    value={field.value ?? ""}
                                     className="h-10"
                                   />
                                 </FormControl>
@@ -1233,6 +1316,7 @@ export function ReservationDialog({
                                   <Input
                                     type="number"
                                     {...field}
+                                    value={field.value ?? ""}
                                     className="h-10"
                                   />
                                 </FormControl>
@@ -1252,8 +1336,8 @@ export function ReservationDialog({
                                 </FormLabel>
                                 <FormControl>
                                   <Input
-                                    type="text"
                                     {...field}
+                                    value={field.value ?? ""}
                                     className="h-10"
                                   />
                                 </FormControl>
@@ -1391,7 +1475,7 @@ export function ReservationDialog({
                               </div>
                             )}
                             <div className="flex justify-between text-sm font-semibold text-primary">
-                              <span>Advance Payment</span>
+                              <span>Paid Amount</span>
                               <span>
                                 RM{" "}
                                 {parseFloat(
@@ -1399,6 +1483,17 @@ export function ReservationDialog({
                                 ).toFixed(2)}
                               </span>
                             </div>
+                            {parseFloat(form.watch("depositAmount") || "0") > 0 && (
+                              <div className="flex justify-between text-sm font-semibold text-blue-600">
+                                <span>Deposit</span>
+                                <span>
+                                  RM{" "}
+                                  {parseFloat(
+                                    form.watch("depositAmount") || "0",
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            )}
                             <Separator className="h-0.5 bg-primary/20" />
                             <div className="flex justify-between font-bold text-lg text-destructive">
                               <span>Balance Due</span>

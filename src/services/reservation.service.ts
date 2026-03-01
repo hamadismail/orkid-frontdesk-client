@@ -56,10 +56,12 @@ export const cancelReservation = async (id: string, reason: string) => {
   return result.data || {};
 };
 
-export const checkInReservation = async (id: string) => {
+export const checkInReservation = async (id: string, payload?: any) => {
   const res = await fetch(`${API_BASE_URL}/reservations/${id}/check-in`, {
-    method: 'POST',
-    credentials: 'include',
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload ? JSON.stringify(payload) : undefined,
+    credentials: "include",
   });
   const result = await res.json();
   return result.data || {};
