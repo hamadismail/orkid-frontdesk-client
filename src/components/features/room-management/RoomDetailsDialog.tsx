@@ -15,6 +15,7 @@ import CheckOut from "../room-services/CheckOut";
 import CancelReservationButton from "../room-services/CancelReservationButton";
 import RoomService from "../room-services/RoomService";
 import MoveRoom from "../room-services/MoveRoom";
+import ToggleRoomStatus from "../room-services/ToggleRoomStatus";
 import { IRoom } from "@/src/types/room.interface";
 import { RoomStatus } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
@@ -84,15 +85,17 @@ export default function RoomDetailsDialog({
   setOpen,
 }: RoomDetailsDialogProps) {
   const [isReservationDialogOpen, setIsReservationDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState<"reserve" | "checkin">("reserve");
+  const [dialogMode, setDialogMode] = useState<"reserve" | "checkin">(
+    "reserve",
+  );
 
   const config = STATUS_CONFIG[roomStatus];
 
-  const hasGuest = (!!guestName || [
-    RoomStatus.OCCUPIED,
-    RoomStatus.RESERVED,
-    RoomStatus.DUE_OUT,
-  ].includes(roomStatus));
+  const hasGuest =
+    !!guestName ||
+    [RoomStatus.OCCUPIED, RoomStatus.RESERVED, RoomStatus.DUE_OUT].includes(
+      roomStatus,
+    );
 
   const getStayDuration = () => {
     if (!arrival || !departure) return null;
@@ -220,6 +223,7 @@ export default function RoomDetailsDialog({
       <div className="px-6 pb-6 pt-4 border-t bg-muted/50">
         {roomStatus === RoomStatus.AVAILABLE && (
           <div className="flex justify-end gap-2">
+            <ToggleRoomStatus room={room} onClose={() => setOpen(false)} />
             <Button
               variant="outline"
               size="sm"
@@ -230,14 +234,20 @@ export default function RoomDetailsDialog({
               Reserve
             </Button>
             <Button
-                variant="default"
-                size="sm"
-                className="gap-2"
-                onClick={handleCheckInClick}
+              variant="default"
+              size="sm"
+              className="gap-2"
+              onClick={handleCheckInClick}
             >
-                <CalendarCheck className="h-4 w-4" />
-                Check-in
+              <CalendarCheck className="h-4 w-4" />
+              Check-in
             </Button>
+          </div>
+        )}
+
+        {roomStatus === RoomStatus.OUT_OF_ORDER && (
+          <div className="flex justify-end gap-2">
+            <ToggleRoomStatus room={room} onClose={() => setOpen(false)} />
           </div>
         )}
 
@@ -250,13 +260,13 @@ export default function RoomDetailsDialog({
               />
             )}
             <Button
-                variant="default"
-                size="sm"
-                className="gap-2"
-                onClick={handleCheckInClick}
+              variant="default"
+              size="sm"
+              className="gap-2"
+              onClick={handleCheckInClick}
             >
-                <CalendarCheck className="h-4 w-4" />
-                Check-in
+              <CalendarCheck className="h-4 w-4" />
+              Check-in
             </Button>
           </div>
         )}
@@ -272,25 +282,27 @@ export default function RoomDetailsDialog({
           </div>
         )}
 
-        {[RoomStatus.OCCUPIED, RoomStatus.DUE_OUT, RoomStatus.SERVICE].includes(roomStatus) && (
+        {[RoomStatus.OCCUPIED, RoomStatus.DUE_OUT, RoomStatus.SERVICE].includes(
+          roomStatus,
+        ) && (
           <div className="grid grid-cols-2 gap-2">
             <RoomService room={room} onClose={() => setOpen(false)} />
             {reservation && (
-                <>
-                    <MoveRoom
-                        reservationId={reservation._id || ""}
-                        currentRoom={room as any}
-                        onClose={() => setOpen(false)}
-                    />
-                    <StayOver
-                        reservation={reservation}
-                        onClose={() => setOpen(false)}
-                    />
-                    <CheckOut
-                        reservation={reservation}
-                        onClose={() => setOpen(false)}
-                    />
-                </>
+              <>
+                <MoveRoom
+                  reservationId={reservation._id || ""}
+                  currentRoom={room as any}
+                  onClose={() => setOpen(false)}
+                />
+                <StayOver
+                  reservation={reservation}
+                  onClose={() => setOpen(false)}
+                />
+                <CheckOut
+                  reservation={reservation}
+                  onClose={() => setOpen(false)}
+                />
+              </>
             )}
           </div>
         )}

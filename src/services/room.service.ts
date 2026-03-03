@@ -33,7 +33,7 @@ export const createRoom = async (data: any) => {
   return result.data || {};
 };
 
-export const updateRoomStatus = async (roomId: string, status: 'clean' | 'service' | 'sclean') => {
+export const updateRoomStatus = async (roomId: string, status: 'clean' | 'service' | 'sclean' | 'ooo') => {
   const res = await fetch(`${API_BASE_URL}/rooms/${roomId}/${status}`, {
     method: 'PATCH',
     credentials: 'include',
