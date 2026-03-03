@@ -186,7 +186,8 @@ function PaymentTable() {
                     <TableCell>
                       <div className="font-medium">{guest?.name}</div>
                       {item.groupName &&
-                        item.groupName !== "Single Booking" && (
+                        item.groupName !== "Single Booking" && 
+                        !item.groupName.startsWith("Single -") && (
                           <div className="text-xs text-primary font-semibold">
                             Group: {item.groupName}
                           </div>
@@ -225,8 +226,8 @@ function PaymentTable() {
                     <TableCell>
                       <PaymentModal 
                         reservation={item.reservation} 
-                        isGroup={item.groupName && item.groupName !== "Single Booking"}
-                        groupId={item.groupName && item.groupName !== "Single Booking" ? item._id : undefined}
+                        isGroup={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -")}
+                        groupId={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -") ? item._id : undefined}
                       />
                     </TableCell>
                   </TableRow>
