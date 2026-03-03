@@ -1,21 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState } from "react";
 import { Hotel } from "lucide-react";
 import RoomCard from "@/src/components/features/room-management/RoomCard";
 import RoomFilter from "@/src/components/features/room-management/RoomFilter";
 import { IRoom } from "@/src/types/room.interface";
-import { RoomStatus, RoomType, RESERVATION_STATUS } from "@/src/types/enums";
+import { RoomStatus, RoomType } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
 import { IGuest } from "@/src/types/guest.interface";
 import { useQuery } from "@tanstack/react-query";
 import LoadingSpiner from "@/src/shared/LoadingSpiner";
 import { getAllRooms } from "@/src/services/room.service";
-import { getAllReservations } from "@/src/services/reservation.service";
 import AddRoomDialog from "../room-services/AddRoomDialog";
-
-import { isSameDay, startOfDay } from "date-fns";
 import DateTimeClock from "@/src/shared/DateTimeClock";
 
 function AllRooms() {
@@ -30,92 +26,20 @@ function AllRooms() {
   });
   const [roomNumberFilter, setRoomNumberFilter] = useState("");
 
-  const { data: rooms, isLoading: RoomLoading } = useQuery({
-    queryKey: ["rooms"],
-    queryFn: () => getAllRooms(),
+  const { data: roomData, isLoading: RoomLoading } = useQuery({
+    queryKey: ["rooms", floorFilter, typeFilter, statusFilter, dateFilter, roomNumberFilter],
+    queryFn: () => getAllRooms({
+      roomFloor: floorFilter,
+      roomType: typeFilter,
+      roomStatus: statusFilter,
+      search: roomNumberFilter,
+      date: dateFilter
+    }),
   });
 
-  const { data: reservations, isLoading: ReserveLoading } = useQuery({
-    queryKey: ["reservations"],
-    queryFn: () => getAllReservations({ limit: 1000 }),
-  });
-
-  const allRooms = useMemo(() => rooms || [], [rooms]);
-  const allReservations = useMemo(() => {
-    if (!reservations) return [];
-    if (Array.isArray(reservations)) return reservations;
-    if (reservations.data && Array.isArray(reservations.data))
-      return reservations.data;
-    return [];
-  }, [reservations]);
-
-  const getRoomInfo = useCallback(
-    (room: IRoom) => {
-      const selectedDate = startOfDay(new Date(dateFilter));
-
-      // 1. Check if there's a reservation arriving on the selected date
-      const arrivalRes = allReservations.find((r: IReservation) => {
-        const resRoomId =
-          typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-        const roomId =
-          typeof room._id === "object"
-            ? (room._id as any).toString()
-            : room._id;
-
-        if (resRoomId?.toString() !== roomId?.toString()) return false;
-
-        const arrival = startOfDay(new Date(r.stay.arrival));
-        return (
-          [RESERVATION_STATUS.RESERVED].includes(r.status) &&
-          isSameDay(arrival, selectedDate)
-        );
-      });
-
-      // 2. Find the current stay (for name display on occupied rooms)
-      const currentRes = allReservations.find((r: IReservation) => {
-        const resRoomId =
-          typeof r.roomId === "object" ? r.roomId._id : r.roomId;
-        const roomId =
-          typeof room._id === "object"
-            ? (room._id as any).toString()
-            : room._id;
-
-        return (
-          resRoomId?.toString() === roomId?.toString() &&
-          r.status === RESERVATION_STATUS.CHECKED_IN
-        );
-      });
-
-      const activeRes = arrivalRes || currentRes;
-      const guest = activeRes?.guestId as unknown as IGuest;
-
-      // Determine visual status
-      let visualStatus = room.roomStatus;
-
-      if (arrivalRes) {
-        visualStatus = RoomStatus.RESERVED;
-      } else if (currentRes) {
-        const departure = startOfDay(new Date(currentRes.stay.departure));
-        // If departure is today or in the past, mark as DUE_OUT
-        if (departure <= selectedDate) {
-          visualStatus = RoomStatus.DUE_OUT;
-        }
-      }
-
-      return {
-        roomStatus: visualStatus,
-        guestName: guest?.name || "",
-        guestStatus: activeRes?.status || "",
-        arrival: activeRes ? new Date(activeRes.stay.arrival) : undefined,
-        departure: activeRes ? new Date(activeRes.stay.departure) : undefined,
-        reservation: activeRes,
-      };
-    },
-    [dateFilter, allReservations],
-  );
-
+  const rooms = useMemo(() => roomData?.rooms || [], [roomData]);
   const roomStatusCounts = useMemo(() => {
-    const counts: Record<string, number> = {
+    return roomData?.counts || {
       [RoomStatus.AVAILABLE]: 0,
       [RoomStatus.OCCUPIED]: 0,
       [RoomStatus.RESERVED]: 0,
@@ -124,54 +48,7 @@ function AllRooms() {
       [RoomStatus.OUT_OF_ORDER]: 0,
       [RoomStatus.SERVICE]: 0,
     };
-
-    allRooms.forEach((room: IRoom) => {
-      const info = getRoomInfo(room);
-      const visualStatus = info.roomStatus;
-      if (counts[visualStatus] !== undefined) {
-        counts[visualStatus]++;
-      } else {
-        counts[visualStatus] = 1;
-      }
-    });
-
-    return counts;
-  }, [allRooms, getRoomInfo]);
-
-  const filteredRooms = allRooms.filter((room: IRoom) => {
-    // Basic filters
-    const matchesFloor =
-      floorFilter === "all" || room.roomFloor.toString() === floorFilter;
-    const matchesType = typeFilter === "all" || room.roomType === typeFilter;
-    const matchesNumber =
-      roomNumberFilter === "" ||
-      room.roomNo.toLowerCase().includes(roomNumberFilter.toLowerCase());
-
-    // Status filter logic needs to be updated for the new unified model
-    let matchesStatus = statusFilter === "all";
-    if (!matchesStatus) {
-      const info = getRoomInfo(room);
-      const currentVisualStatus = info.roomStatus;
-
-      if (statusFilter === RoomStatus.AVAILABLE)
-        matchesStatus = currentVisualStatus === RoomStatus.AVAILABLE;
-      else if (statusFilter === RoomStatus.OCCUPIED)
-        matchesStatus =
-          currentVisualStatus === RoomStatus.OCCUPIED ||
-          currentVisualStatus === RoomStatus.SERVICE ||
-          currentVisualStatus === RoomStatus.DUE_OUT;
-      else if (statusFilter === RoomStatus.DIRTY)
-        matchesStatus = currentVisualStatus === RoomStatus.DIRTY;
-      else if (statusFilter === RoomStatus.RESERVED)
-        matchesStatus = currentVisualStatus === RoomStatus.RESERVED;
-      else if (statusFilter === RoomStatus.DUE_OUT)
-        matchesStatus = currentVisualStatus === RoomStatus.DUE_OUT;
-      else if (statusFilter === RoomStatus.SERVICE)
-        matchesStatus = currentVisualStatus === RoomStatus.SERVICE;
-    }
-
-    return matchesFloor && matchesType && matchesNumber && matchesStatus;
-  });
+  }, [roomData]);
 
   return (
     <div className="space-y-6 p-6">
@@ -181,7 +58,6 @@ function AllRooms() {
           <h2 className="text-2xl font-bold">Room Management</h2>
         </div>
 
-        {/* ... time display ... */}
         <DateTimeClock />
         <AddRoomDialog />
       </div>
@@ -245,23 +121,25 @@ function AllRooms() {
         />
       </div>
 
-      {RoomLoading || ReserveLoading ? (
+      {RoomLoading ? (
         <LoadingSpiner />
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredRooms.map((room: IRoom) => {
-            const info = getRoomInfo(room);
+          {rooms.map((room: IRoom) => {
+            const reservation = room.currentReservationId as IReservation | undefined;
+            const guest = reservation?.guestId as unknown as IGuest | undefined;
+
             return (
               <RoomCard
                 key={room._id}
-                roomStatus={info.roomStatus}
+                roomStatus={room.visualStatus || room.roomStatus}
                 room={room}
-                guestName={info.guestName}
-                guestStatus={info.guestStatus}
-                arrival={info.arrival}
-                departure={info.departure}
-                allReservations={allReservations}
-                reservation={info.reservation}
+                guestName={guest?.name || ""}
+                guestStatus={reservation?.status || ""}
+                arrival={reservation ? new Date(reservation.stay.arrival) : undefined}
+                departure={reservation ? new Date(reservation.stay.departure) : undefined}
+                allReservations={[]} // Not needed in dialog for now, fetch inside if needed
+                reservation={reservation}
               />
             );
           })}

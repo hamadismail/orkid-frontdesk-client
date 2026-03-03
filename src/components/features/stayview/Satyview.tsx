@@ -44,11 +44,17 @@ function StayViewPage() {
     queryFn: () => getAllRooms(),
   });
   const { data: reservations, isLoading: ReserveLoading } = useQuery({
-    queryKey: ["reservations"],
-    queryFn: () => getAllReservations({ limit: 1000 }),
+    queryKey: ["reservations", "stayview"],
+    queryFn: () => getAllReservations({
+      limit: 1000,
+      status: [
+        RESERVATION_STATUS.CHECKED_IN,
+        RESERVATION_STATUS.RESERVED
+      ].join(",")
+    }),
   });
 
-  const allRooms = useMemo(() => rooms || [], [rooms]);
+  const allRooms = useMemo(() => (rooms as any)?.rooms || [], [rooms]);
   const allReservations = useMemo(() => {
     if (!reservations) return [];
     if (Array.isArray(reservations)) return reservations;
@@ -241,14 +247,7 @@ function StayViewPage() {
                               ? (room._id as any).toString()
                               : room._id;
 
-                          return (
-                            resRoomId?.toString() === roomId?.toString() &&
-                            [
-                              RESERVATION_STATUS.CHECKED_IN,
-                              RESERVATION_STATUS.CHECKED_OUT,
-                              RESERVATION_STATUS.RESERVED,
-                            ].includes(res.status)
-                          );
+                          return resRoomId?.toString() === roomId?.toString();
                         })
                         .map((res: IReservation) => {
                           const pos = calculatePosition(

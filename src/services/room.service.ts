@@ -1,7 +1,8 @@
 import { API_BASE_URL } from '../lib/config';
 
-export const getAllRooms = async () => {
-  const res = await fetch(`${API_BASE_URL}/rooms`, {
+export const getAllRooms = async (query?: Record<string, any>) => {
+  const queryString = query ? '?' + new URLSearchParams(query).toString() : '';
+  const res = await fetch(`${API_BASE_URL}/rooms${queryString}`, {
     method: 'GET',
     cache: 'no-store',
     credentials: 'include',
@@ -12,7 +13,7 @@ export const getAllRooms = async () => {
   }
 
   const result = await res.json();
-  return result.data || [];
+  return result.data || { rooms: [], counts: {} };
 };
 
 export const createRoom = async (data: any) => {

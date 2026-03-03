@@ -55,7 +55,8 @@ export default function MoveRoom({
   const { data: availableRooms, isLoading } = useQuery<IRoom[]>({
     queryKey: ["available-rooms", currentRoom._id],
     queryFn: async () => {
-      const rooms = await getAllRooms();
+      const result = await getAllRooms();
+      const rooms = result.rooms || [];
       return rooms.filter(
         (r: IRoom) =>
           r.roomStatus === RoomStatus.AVAILABLE && r._id !== currentRoom._id

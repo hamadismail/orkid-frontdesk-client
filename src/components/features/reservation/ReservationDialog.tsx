@@ -216,64 +216,64 @@ export function ReservationDialog({
   // Effect to pre-fill from existing reservation
   useEffect(() => {
     if (isOpen && !prevOpen.current) {
-        // Just opened
-        if (existingReservation) {
-          const guest = existingReservation.guestId as unknown as IGuest;
-          const resRoom =
-            typeof existingReservation.roomId === "object"
-              ? existingReservation.roomId
-              : room && room._id === existingReservation.roomId
-                ? room
-                : null;
+      // Just opened
+      if (existingReservation) {
+        const guest = existingReservation.guestId as unknown as IGuest;
+        const resRoom =
+          typeof existingReservation.roomId === "object"
+            ? existingReservation.roomId
+            : room && room._id === existingReservation.roomId
+              ? room
+              : null;
 
-          form.reset({
-            isGroup:
-              !!existingReservation.groupId &&
-              (existingReservation.groupId as any).groupName !== "Single Booking",
-            groupName: (existingReservation.groupId as any)?.groupName || "",
-            name: guest?.name || "",
-            phone: guest?.phone || "",
-            email: guest?.email || "",
-            passport: guest?.passport || "",
-            country: guest?.country || "",
-            source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
-            refId: existingReservation.refId || "",
-            arrivalDate:
-              mode === "checkin"
-                ? new Date()
-                : new Date(existingReservation.stay.arrival),
-            departureDate: new Date(existingReservation.stay.departure),
-            rooms: [
-              {
-                roomType: (resRoom as any)?.roomType || room?.roomType || "",
-                roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
-                roomPrice: existingReservation.rate.roomPrice.toString(),
-                adults: existingReservation.stay.adults,
-                children: existingReservation.stay.children,
-              },
-            ],
-            paidAmount: existingReservation.payment.paidAmount.toString(),
-            paymentMethod:
-              (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
-              PAYMENT_METHOD.CASH,
-            depositAmount: existingReservation.payment.deposit?.toString() || "",
-            depositMethod:
-              (existingReservation.payment.depositMethod as PAYMENT_METHOD) ||
-              PAYMENT_METHOD.CASH,
-            remarks: existingReservation.payment.remarks || "",
-            sst: existingReservation.rate.sst?.toString() || "",
-            tourismTax: existingReservation.rate.tourismTax?.toString() || "",
-            discount: existingReservation.rate.discount?.toString() || "",
-          });
-          setSelectedGuest(guest);
-          setIsGroup(
+        form.reset({
+          isGroup:
             !!existingReservation.groupId &&
-              (existingReservation.groupId as any).groupName !== "Single Booking",
-          );
-        } else {
-          // Reset to default for new reservation when dialog opens
-          handleReset();
-        }
+            (existingReservation.groupId as any).groupName !== "Single Booking",
+          groupName: (existingReservation.groupId as any)?.groupName || "",
+          name: guest?.name || "",
+          phone: guest?.phone || "",
+          email: guest?.email || "",
+          passport: guest?.passport || "",
+          country: guest?.country || "",
+          source: (existingReservation.source as OTAS) || OTAS.WALKING_GUEST,
+          refId: existingReservation.refId || "",
+          arrivalDate:
+            mode === "checkin"
+              ? new Date()
+              : new Date(existingReservation.stay.arrival),
+          departureDate: new Date(existingReservation.stay.departure),
+          rooms: [
+            {
+              roomType: (resRoom as any)?.roomType || room?.roomType || "",
+              roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
+              roomPrice: existingReservation.rate.roomPrice.toString(),
+              adults: existingReservation.stay.adults,
+              children: existingReservation.stay.children,
+            },
+          ],
+          paidAmount: existingReservation.payment.paidAmount.toString(),
+          paymentMethod:
+            (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
+            PAYMENT_METHOD.CASH,
+          depositAmount: existingReservation.payment.deposit?.toString() || "",
+          depositMethod:
+            (existingReservation.payment.depositMethod as PAYMENT_METHOD) ||
+            PAYMENT_METHOD.CASH,
+          remarks: existingReservation.payment.remarks || "",
+          sst: existingReservation.rate.sst?.toString() || "",
+          tourismTax: existingReservation.rate.tourismTax?.toString() || "",
+          discount: existingReservation.rate.discount?.toString() || "",
+        });
+        setSelectedGuest(guest);
+        setIsGroup(
+          !!existingReservation.groupId &&
+            (existingReservation.groupId as any).groupName !== "Single Booking",
+        );
+      } else {
+        // Reset to default for new reservation when dialog opens
+        handleReset();
+      }
     }
     prevOpen.current = isOpen;
   }, [existingReservation, isOpen, room, form, handleReset, mode]);
@@ -290,7 +290,10 @@ export function ReservationDialog({
     queryFn: () => getAllRooms(),
   });
 
-  const allRooms = useMemo(() => allRoomsData ?? [], [allRoomsData]);
+  const allRooms = useMemo(
+    () => (allRoomsData as any)?.rooms || [],
+    [allRoomsData],
+  );
 
   const arrivalDate = form.watch("arrivalDate");
   const departureDate = form.watch("departureDate");
@@ -303,9 +306,9 @@ export function ReservationDialog({
   const calculateTotalAmount = useCallback(() => {
     const rooms = form.watch("rooms") || [];
     const totalRoomPrice = rooms.reduce(
-        (acc, r) => acc + (parseFloat(r.roomPrice || "0") || 0) * stayDuration,
-        0,
-      );
+      (acc, r) => acc + (parseFloat(r.roomPrice || "0") || 0) * stayDuration,
+      0,
+    );
     const sst = parseFloat(form.watch("sst") || "0") || 0;
     const tourismTax = parseFloat(form.watch("tourismTax") || "0") || 0;
 
@@ -370,15 +373,20 @@ export function ReservationDialog({
       groupReservations: groupReservations.map((gr: any) => {
         // Try to find the matching room in the form to get the roomNo
         const formRoom = form.getValues("rooms").find((r: any) => {
-            // Compare by roomNo if available in both
-            if (gr.roomNo && r.roomNo) return gr.roomNo === r.roomNo;
-            // Otherwise compare by roomId if gr.roomId is a string
-            return typeof gr.roomId === 'string' && allRooms.find(ar => ar._id === gr.roomId)?.roomNo === r.roomNo;
+          // Compare by roomNo if available in both
+          if (gr.roomNo && r.roomNo) return gr.roomNo === r.roomNo;
+          // Otherwise compare by roomId if gr.roomId is a string
+          return (
+            typeof gr.roomId === "string" &&
+            allRooms.find((ar: IRoom) => ar._id === gr.roomId)?.roomNo ===
+              r.roomNo
+          );
         });
 
         return {
           roomNo: gr.roomId?.roomNo || gr.roomNo || formRoom?.roomNo || "-",
-          roomType: gr.roomId?.roomType || gr.roomType || formRoom?.roomType || "-",
+          roomType:
+            gr.roomId?.roomType || gr.roomType || formRoom?.roomType || "-",
           arrival: gr.stay?.arrival || form.getValues("arrivalDate"),
           departure: gr.stay?.departure || form.getValues("departureDate"),
           guestName: (guest as any)?.name || form.getValues("name"),
@@ -460,7 +468,7 @@ export function ReservationDialog({
           },
           rooms: data.rooms.map((r, index) => {
             const selectedRoom = allRooms.find(
-              (room) => room.roomNo === r.roomNo,
+              (room: IRoom) => room.roomNo === r.roomNo,
             );
             if (!selectedRoom) throw new Error(`Room ${r.roomNo} not found`);
 
@@ -520,7 +528,9 @@ export function ReservationDialog({
       } else {
         // Handle Single Reservation
         const roomInfo = data.rooms[0];
-        const selectedRoom = allRooms.find((r) => r.roomNo === roomInfo.roomNo);
+        const selectedRoom = allRooms.find(
+          (r: IRoom) => r.roomNo === roomInfo.roomNo,
+        );
         if (!selectedRoom) throw new Error(`Room ${roomInfo.roomNo} not found`);
 
         const payload = {
@@ -975,8 +985,14 @@ export function ReservationDialog({
                                       } else if (range?.from) {
                                         // If they clicked a single date, treat it as departure
                                         // unless it's the same as arrival
-                                        if (format(range.from, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd")) {
-                                            form.setValue("departureDate", range.from);
+                                        if (
+                                          format(range.from, "yyyy-MM-dd") !==
+                                          format(new Date(), "yyyy-MM-dd")
+                                        ) {
+                                          form.setValue(
+                                            "departureDate",
+                                            range.from,
+                                          );
                                         }
                                       }
                                     } else {
@@ -1113,10 +1129,18 @@ export function ReservationDialog({
                                       disabled={!!existingReservation}
                                       onValueChange={(val) => {
                                         field.onChange(val);
-                                        const selected = allRooms.find(r => r.roomNo === val);
+                                        const selected = allRooms.find(
+                                          (r: IRoom) => r.roomNo === val,
+                                        );
                                         if (selected) {
-                                          form.setValue(`rooms.${index}.adults`, selected.adults || 1);
-                                          form.setValue(`rooms.${index}.children`, selected.children || 0);
+                                          form.setValue(
+                                            `rooms.${index}.adults`,
+                                            selected.adults || 1,
+                                          );
+                                          form.setValue(
+                                            `rooms.${index}.children`,
+                                            selected.children || 0,
+                                          );
                                         }
                                       }}
                                       value={field.value}
@@ -1128,7 +1152,7 @@ export function ReservationDialog({
                                       </FormControl>
                                       <SelectContent>
                                         {allRooms
-                                          .filter((r) => {
+                                          .filter((r: IRoom) => {
                                             return (
                                               r.roomType ===
                                               form.watch(
@@ -1136,7 +1160,7 @@ export function ReservationDialog({
                                               )
                                             );
                                           })
-                                          .map((room) => {
+                                          .map((room: IRoom) => {
                                             const isSelectable =
                                               room.roomStatus ===
                                                 RoomStatus.AVAILABLE ||
@@ -1338,11 +1362,13 @@ export function ReservationDialog({
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
-                                    {Object.values(PAYMENT_METHOD).map((method) => (
-                                      <SelectItem key={method} value={method}>
-                                        {method}
-                                      </SelectItem>
-                                    ))}
+                                    {Object.values(PAYMENT_METHOD).map(
+                                      (method) => (
+                                        <SelectItem key={method} value={method}>
+                                          {method}
+                                        </SelectItem>
+                                      ),
+                                    )}
                                   </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -1574,7 +1600,8 @@ export function ReservationDialog({
                                 ).toFixed(2)}
                               </span>
                             </div>
-                            {parseFloat(form.watch("depositAmount") || "0") > 0 && (
+                            {parseFloat(form.watch("depositAmount") || "0") >
+                              0 && (
                               <div className="flex justify-between text-sm font-semibold text-blue-600">
                                 <span>Deposit</span>
                                 <span>
