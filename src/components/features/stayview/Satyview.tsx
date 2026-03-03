@@ -245,6 +245,7 @@ function StayViewPage() {
                             resRoomId?.toString() === roomId?.toString() &&
                             [
                               RESERVATION_STATUS.CHECKED_IN,
+                              RESERVATION_STATUS.CHECKED_OUT,
                               RESERVATION_STATUS.RESERVED,
                             ].includes(res.status)
                           );
