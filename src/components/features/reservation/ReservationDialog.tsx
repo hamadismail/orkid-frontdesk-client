@@ -62,7 +62,7 @@ import {
   FormLabel,
   FormMessage,
 } from "../../ui/form";
-import { cn } from "@/src/lib/utils";
+import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import {
   Select,
   SelectContent,
@@ -484,8 +484,8 @@ export function ReservationDialog({
               roomId: selectedRoom._id,
               status: status,
               stay: {
-                arrival: data.arrivalDate,
-                departure: data.departureDate,
+                arrival: normalizeToMalaysiaMidnight(data.arrivalDate),
+                departure: normalizeToMalaysiaMidnight(data.departureDate),
                 adults: r.adults,
                 children: r.children,
               },
@@ -528,8 +528,8 @@ export function ReservationDialog({
           roomId: selectedRoom._id,
           status: status,
           stay: {
-            arrival: data.arrivalDate,
-            departure: data.departureDate,
+            arrival: normalizeToMalaysiaMidnight(data.arrivalDate),
+            departure: normalizeToMalaysiaMidnight(data.departureDate),
             adults: roomInfo.adults,
             children: roomInfo.children,
           },
