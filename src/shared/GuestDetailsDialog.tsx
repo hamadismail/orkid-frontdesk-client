@@ -4,7 +4,6 @@
 import {
   User,
   Briefcase,
-  DollarSign,
   MessageSquare,
   BedDouble,
   CalendarDays,
@@ -15,19 +14,31 @@ import {
   Globe,
   Fingerprint,
   Plane,
+  Clock,
+  MapPin,
+  CreditCard,
+  History,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
   DialogDescription,
+  DialogTitle,
 } from "../components/ui/dialog";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
+import { Badge } from "../components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
+import { Card, CardContent } from "../components/ui/card";
 import { IReservation } from "../types/reservation.interface";
 import { IGuest } from "../types/guest.interface";
 import { IRoom } from "../types/room.interface";
@@ -38,6 +49,7 @@ import CancelReservationButton from "../components/features/room-services/Cancel
 import StayOver from "../components/features/room-services/StayOver";
 import MoveRoom from "../components/features/room-services/MoveRoom";
 import CheckOut from "../components/features/room-services/CheckOut";
+import { cn } from "../lib/utils";
 
 interface GuestDetailsDialogProps {
   isDialogOpen: boolean;
@@ -45,58 +57,86 @@ interface GuestDetailsDialogProps {
   selectedGuest: IReservation | null;
 }
 
-interface DetailItemProps {
-  icon: React.ElementType;
+const DetailRow = ({
+  icon: Icon,
+  label,
+  value,
+  className = "",
+}: {
+  icon: any;
   label: string;
-  value: React.ReactNode;
-}
-
-const DetailItem = ({ icon: Icon, label, value }: DetailItemProps) => (
-  <div className="flex items-start gap-3">
-    <Icon className="h-5 w-5 text-muted-foreground mt-1" />
-    <div>
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-semibold text-foreground text-base font-mono">
+  value: any;
+  className?: string;
+}) => (
+  <div className={cn("flex items-center gap-3 py-2 px-1", className)}>
+    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary shrink-0">
+      <Icon className="h-4 w-4" />
+    </div>
+    <div className="min-w-0 flex-1">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+        {label}
+      </p>
+      <p className="text-sm font-medium text-foreground truncate">
         {value || "N/A"}
       </p>
     </div>
   </div>
 );
 
-const PaymentRow = ({
+const PaymentItem = ({
   label,
-  value,
   amount,
-  className = "",
   isTotal = false,
+  isNegative = false,
 }: {
   label: string;
-  value?: string;
-  amount?: number;
-  className?: string;
+  amount: number;
   isTotal?: boolean;
+  isNegative?: boolean;
 }) => (
   <div
-    className={`flex justify-between items-center py-2.5 px-3 rounded-md ${
-      isTotal ? "bg-muted" : ""
-    } ${className}`}
-  >
-    <span className="text-sm text-muted-foreground">{label}</span>
-    {amount !== undefined ? (
-      <span
-        className={`font-semibold text-base ${
-          isTotal ? "text-primary" : "text-foreground"
-        }`}
-      >
-        RM {amount.toFixed(2)}
-      </span>
-    ) : (
-      <span className="font-semibold text-base text-foreground">
-        {value || "0"}
-      </span>
+    className={cn(
+      "flex justify-between items-center py-2 px-1",
+      isTotal && "bg-primary/5 rounded-md px-2 mt-2 border border-primary/10",
     )}
+  >
+    <span
+      className={cn(
+        "text-sm",
+        isTotal ? "font-semibold text-primary" : "text-muted-foreground",
+      )}
+    >
+      {label}
+    </span>
+    <span
+      className={cn(
+        "font-mono font-semibold text-sm",
+        isTotal ? "text-primary text-base" : "text-foreground",
+        isNegative && "text-destructive",
+      )}
+    >
+      {isNegative ? "-" : ""}RM {Math.abs(amount).toFixed(2)}
+    </span>
   </div>
 );
+
+const getStatusBadge = (status: RESERVATION_STATUS) => {
+  switch (status) {
+    case RESERVATION_STATUS.CHECKED_IN:
+      return (
+        <Badge className="bg-green-500 hover:bg-green-600">Checked In</Badge>
+      );
+    case RESERVATION_STATUS.CONFIRMED:
+    case RESERVATION_STATUS.RESERVED:
+      return <Badge className="bg-blue-500 hover:bg-blue-600">Reserved</Badge>;
+    case RESERVATION_STATUS.CHECKED_OUT:
+      return <Badge variant="secondary">Checked Out</Badge>;
+    case RESERVATION_STATUS.CANCELLED:
+      return <Badge variant="destructive">Cancelled</Badge>;
+    default:
+      return <Badge variant="outline">{status}</Badge>;
+  }
+};
 
 export function GuestDetailsDialog({
   isDialogOpen,
@@ -108,201 +148,308 @@ export function GuestDetailsDialog({
   const guest = selectedGuest.guestId as unknown as IGuest;
   const { stay, payment, status } = selectedGuest;
   const room = selectedGuest.roomId as unknown as IRoom;
-  const isProfileOnly = (status as string) === "PROFILE";
+  const isProfileOnly = (status as any) === "PROFILE";
 
   const guestNameInitial = guest?.name
     ? guest.name
         .split(" ")
         .map((n) => n[0])
         .join("")
+        .toUpperCase()
     : "G";
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-      <DialogContent className="min-w-4xl p-0 max-h-[95vh] flex flex-col">
-        <DialogHeader className="p-6 pb-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16">
+      <DialogContent className="min-w-4xl p-0 overflow-hidden bg-background border-none shadow-2xl h-[95vh] flex flex-col">
+        {/* Modern Header Section */}
+        <div className="relative h-24 bg-primary/5 shrink-0 overflow-hidden border-b">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <User size={80} />
+          </div>
+          <div className="absolute bottom-2 left-8">
+            <Avatar className="h-16 w-16 border-4 border-background shadow-lg">
               <AvatarImage
-                src={`https://api.dicebear.com/6.x/initials/svg?seed=${guest?.name}`}
-                alt={guest?.name}
+                src={`https://api.dicebear.com/7.x/initials/svg?seed=${guest?.name}&backgroundColor=00a1ff`}
               />
-              <AvatarFallback>{guestNameInitial}</AvatarFallback>
+              <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
+                {guestNameInitial}
+              </AvatarFallback>
             </Avatar>
-            <div>
-              <DialogTitle className="text-3xl font-bold tracking-tight">
+          </div>
+          <div className="absolute bottom-4 left-36 flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-2xl font-bold text-foreground">
                 {guest?.name}
               </DialogTitle>
-              <p className="text-base text-muted-foreground">
-                {room?.roomNo
-                  ? `Room ${room.roomNo} - ${room.roomType}`
-                  : isProfileOnly
-                    ? "Guest Profile"
-                    : "No room assigned"}
-              </p>
+              {getStatusBadge(status as RESERVATION_STATUS)}
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
+              {room?.roomNo && (
+                <span className="flex items-center gap-1.5 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">
+                  <BedDouble size={14} /> Room {room.roomNo} • {room.roomType}
+                </span>
+              )}
+              {isProfileOnly && (
+                <span className="flex items-center gap-1.5">
+                  <User size={14} /> Profile Record
+                </span>
+              )}
             </div>
           </div>
-        </DialogHeader>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 px-6 pb-6 overflow-y-auto flex-1">
-          {/* Left Column - Personal & Stay Info */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Personal Information
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pl-7">
-                <DetailItem icon={Mail} label="Email" value={guest?.email} />
-                <DetailItem icon={Phone} label="Phone" value={guest?.phone} />
-                <DetailItem
-                  icon={Globe}
-                  label="Country"
-                  value={guest?.country || "N/A"}
-                />
-                <DetailItem
-                  icon={Fingerprint}
-                  label="Passport/IC"
-                  value={guest?.passport}
-                />
-                <DetailItem
-                  icon={Plane}
-                  label="Source"
-                  value={selectedGuest.source || "N/A"}
-                />
-
-                <DetailItem
-                  icon={Hash}
-                  label="Ref ID"
-                  value={selectedGuest.refId}
-                />
-              </div>
-            </div>
-
-            {!isProfileOnly && (
-              <>
-                <Separator />
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                    <Briefcase className="h-5 w-5 text-primary" />
-                    Stay Information
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 pl-7">
-                    <DetailItem
-                      icon={CalendarDays}
-                      label="Arrival"
-                      value={
-                        stay.arrival
-                          ? format(new Date(stay.arrival), "PPP")
-                          : "N/A"
-                      }
-                    />
-                    <DetailItem
-                      icon={CalendarDays}
-                      label="Departure"
-                      value={
-                        stay.departure
-                          ? format(new Date(stay.departure), "PPP")
-                          : "N/A"
-                      }
-                    />
-                    <DetailItem
-                      icon={Users}
-                      label="Adults"
-                      value={stay.adults || 0}
-                    />
-                    <DetailItem
-                      icon={Users}
-                      label="Children"
-                      value={stay.children || 0}
-                    />
-                    <DetailItem
-                      icon={BedDouble}
-                      label="Status"
-                      value={status}
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Right Column - Payment & Remarks */}
-          {!isProfileOnly && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-primary" />
-                  Payment Details
-                </h3>
-                <div className="space-y-1 rounded-lg border bg-card text-card-foreground shadow-sm p-2">
-                  <PaymentRow
-                    label="Room Price"
-                    amount={selectedGuest.rate?.roomPrice}
-                  />
-                  <Separator />
-                  <PaymentRow
-                    label="Subtotal"
-                    amount={selectedGuest.rate?.subtotal}
-                    isTotal
-                  />
-                  <Separator />
-                  <PaymentRow
-                    label="Paid Amount"
-                    amount={payment.paidAmount}
-                    className="text-green-600"
-                  />
-                  <PaymentRow
-                    label="Due Amount"
-                    amount={payment.dueAmount}
-                    className="text-red-600 font-bold"
-                  />
-                  {payment.deposit ? (
-                    <PaymentRow
-                      label="Deposit Amount"
-                      amount={payment.deposit}
-                      className="text-red-600"
-                    />
-                  ) : (
-                    ""
-                  )}
-                  <Separator />
-                  <PaymentRow
-                    label="Payment Method"
-                    value={payment.paymentMethod}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" />
-                  Remarks
-                </h3>
-                <div className="p-3 rounded-md bg-muted text-sm text-muted-foreground">
-                  <p className="leading-relaxed">
-                    {payment.remarks || "No remarks provided."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        <DialogFooter className="p-6 pt-4 bg-muted/40 border-t">
-          <div className="flex w-full gap-2">
+        {/* Content Tabs Area */}
+        <div className="flex-1 overflow-hidden px-6">
+          <Tabs defaultValue="overview" className="h-full flex flex-col">
+            <TabsList className="grid w-full max-w-md grid-cols-3 mb-6 shrink-0">
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Info size={16} /> Overview
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="flex items-center gap-2">
+                <Fingerprint size={16} /> Identity
+              </TabsTrigger>
+              <TabsTrigger value="billing" className="flex items-center gap-2">
+                <CreditCard size={16} /> Billing
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex-1 overflow-y-auto pr-2">
+              <TabsContent value="overview" className="mt-0 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Stay Card */}
+                  <Card className="border-none shadow-sm bg-muted/30">
+                    <CardContent>
+                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Clock size={14} /> Stay Timeline
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-4">
+                          <DetailRow
+                            icon={CalendarDays}
+                            label="Check-In"
+                            value={
+                              stay.arrival
+                                ? format(new Date(stay.arrival), "PPPP")
+                                : "N/A"
+                            }
+                          />
+                        </div>
+                        <DetailRow
+                          icon={CalendarDays}
+                          label="Check-Out"
+                          value={
+                            stay.departure
+                              ? format(new Date(stay.departure), "PPPP")
+                              : "N/A"
+                          }
+                        />
+                        <Separator className="my-2" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <DetailRow
+                            icon={Users}
+                            label="Occupants"
+                            value={`${stay.adults} Adults, ${stay.children} Childs`}
+                          />
+                          <DetailRow
+                            icon={Plane}
+                            label="Booking Source"
+                            value={selectedGuest.source || "N/A"}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Contact Overview */}
+                  <Card className="border-none shadow-sm bg-muted/30">
+                    <CardContent>
+                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Phone size={14} /> Primary Contact
+                      </h4>
+                      <div className="space-y-2">
+                        <DetailRow
+                          icon={Mail}
+                          label="Email Address"
+                          value={guest?.email}
+                        />
+                        <DetailRow
+                          icon={Phone}
+                          label="Phone Number"
+                          value={guest?.phone}
+                        />
+                        <DetailRow
+                          icon={Globe}
+                          label="Country of Residence"
+                          value={guest?.country}
+                        />
+                        <DetailRow
+                          icon={MapPin}
+                          label="Reference ID"
+                          value={selectedGuest.refId}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border-none shadow-sm bg-primary/5">
+                  <CardContent>
+                    <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                      <MessageSquare size={14} /> Internal Remarks
+                    </h4>
+                    <p className="text-sm italic text-muted-foreground leading-relaxed">
+                      {payment.remarks ||
+                        "No special instructions or remarks provided for this guest."}
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="profile" className="mt-0">
+                <Card className="border-none shadow-sm bg-muted/30">
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-6">
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground mb-4 border-b pb-2">
+                            Guest Identity
+                          </h4>
+                          <div className="space-y-4">
+                            <DetailRow
+                              icon={Fingerprint}
+                              label="Passport / IC Number"
+                              value={guest?.passport}
+                            />
+                            <DetailRow
+                              icon={User}
+                              label="Full Legal Name"
+                              value={guest?.name}
+                            />
+                            <DetailRow
+                              icon={Globe}
+                              label="Nationality"
+                              value={guest?.country}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-6">
+                        <div>
+                          <h4 className="text-sm font-bold text-foreground mb-4 border-b pb-2">
+                            Technical Reference
+                          </h4>
+                          <div className="space-y-4">
+                            <DetailRow
+                              icon={Hash}
+                              label="System Reservation ID"
+                              value={selectedGuest._id}
+                            />
+                            <DetailRow
+                              icon={Plane}
+                              label="External Reference"
+                              value={selectedGuest.refId || "N/A"}
+                            />
+                            <DetailRow
+                              icon={Briefcase}
+                              label="Guest Segment"
+                              value={selectedGuest.source}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="billing" className="mt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="border-none shadow-sm bg-muted/30">
+                    <CardContent>
+                      <h4 className="text-sm font-bold text-foreground mb-4 border-b pb-2">
+                        Financial Breakdown
+                      </h4>
+                      <div className="space-y-1">
+                        <PaymentItem
+                          label="Nightly Rate (Room Only)"
+                          amount={selectedGuest.rate?.roomPrice || 0}
+                        />
+                        <PaymentItem
+                          label="Tax & Service Charges"
+                          amount={
+                            (selectedGuest.rate?.subtotal || 0) -
+                            (selectedGuest.rate?.roomPrice || 0)
+                          }
+                        />
+                        <Separator className="my-2" />
+                        <PaymentItem
+                          label="Total Reservation Cost"
+                          amount={selectedGuest.rate?.subtotal || 0}
+                          isTotal
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-none shadow-sm bg-muted/30">
+                    <CardContent>
+                      <h4 className="text-sm font-bold text-foreground mb-4 border-b pb-2">
+                        Transaction History
+                      </h4>
+                      <div className="space-y-1">
+                        <PaymentItem
+                          label="Amount Paid to Date"
+                          amount={payment.paidAmount || 0}
+                        />
+                        {(payment.deposit ?? 0) > 0 && (
+                          <PaymentItem
+                            label="Security Deposit Held"
+                            amount={payment.deposit || 0}
+                          />
+                        )}
+                        <PaymentItem
+                          label="Outstanding Balance"
+                          amount={payment.dueAmount || 0}
+                          isNegative={payment.dueAmount > 0}
+                        />
+                        <Separator className="my-2" />
+                        <div className="flex items-center gap-2 mt-4 text-xs font-semibold text-muted-foreground uppercase">
+                          <CreditCard size={14} /> Method:{" "}
+                          {payment.paymentMethod || "N/A"}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+
+        {/* Improved Actions Footer */}
+        <DialogFooter className="p-6 shrink-0 bg-muted/50 border-t flex flex-row sm:justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-muted-foreground" />
+            <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">
+              Actions based on status: {status}
+            </span>
+          </div>
+          <div className="flex gap-2">
             {!isProfileOnly && (
-              <>
+              <div className="flex gap-2">
                 {status === RESERVATION_STATUS.CHECKED_IN ? (
                   <>
                     <StayOver
                       reservation={selectedGuest}
                       onClose={() => setIsDialogOpen(false)}
+                      variant="outline"
+                      className="border-primary text-primary hover:bg-primary/5"
                     />
                     <MoveRoom
                       reservationId={selectedGuest._id!}
                       currentRoom={room as any}
                       onClose={() => setIsDialogOpen(false)}
+                      variant="outline"
                     />
                     <CheckOut
                       reservation={selectedGuest}
@@ -320,6 +467,7 @@ export function GuestDetailsDialog({
                       reservationId={selectedGuest._id!}
                       currentRoom={room as any}
                       onClose={() => setIsDialogOpen(false)}
+                      variant="outline"
                     />
                     <CancelReservationButton
                       reservationId={selectedGuest._id!}
@@ -327,16 +475,21 @@ export function GuestDetailsDialog({
                     />
                   </>
                 ) : null}
-              </>
+              </div>
             )}
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              className="px-8"
+            >
+              Close
+            </Button>
           </div>
-
-          <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-            Close
-          </Button>
         </DialogFooter>
       </DialogContent>
-      <DialogDescription className="sr-only">Guest Details</DialogDescription>
+      <DialogDescription className="sr-only">
+        Detailed overview of guest profile, stay history and billing.
+      </DialogDescription>
     </Dialog>
   );
 }
