@@ -46,6 +46,7 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Stay amended successfully!");
       setOpen(false);
       onClose?.();

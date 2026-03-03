@@ -79,6 +79,7 @@ export default function StayOver({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Stay extended successfully");
       setOpen(false);
       onClose?.();

@@ -174,6 +174,7 @@ export default function PaymentModal({
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
+      queryClient.invalidateQueries({ queryKey: ["rooms"] });
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["reservations", "payment"] });
       queryClient.invalidateQueries({ queryKey: ["reservations", reservation?._id] });
