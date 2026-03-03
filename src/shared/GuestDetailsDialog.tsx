@@ -150,6 +150,24 @@ export function GuestDetailsDialog({
   const room = selectedGuest.roomId as unknown as IRoom;
   const isProfileOnly = (status as any) === "PROFILE";
 
+  const calculateNights = (reservation: IReservation) => {
+    const arrival = new Date(reservation.stay.arrival);
+    const departure = new Date(reservation.stay.departure);
+    const timeDiff = departure.getTime() - arrival.getTime();
+    return Math.ceil(timeDiff / (1000 * 3600 * 24));
+  };
+
+  const nights = calculateNights(selectedGuest);
+  const roomPrice = selectedGuest.rate?.roomPrice || 0;
+  const subTotal = selectedGuest.rate?.subtotal || 0;
+  const sstAmount = selectedGuest.rate?.sst || 0;
+  const tourismTaxAmount = selectedGuest.rate?.tourismTax || 0;
+  const totalRoomCharges = roomPrice * nights;
+  const discountAmount = totalRoomCharges - subTotal;
+  // const discountAmount =
+  //   (selectedGuest.rate?.discount || 0) + totalRoomCharges - subTotal;
+  const grandTotal = totalRoomCharges + sstAmount + tourismTaxAmount;
+
   const guestNameInitial = guest?.name
     ? guest.name
         .split(" ")
@@ -371,20 +389,31 @@ export function GuestDetailsDialog({
                       </h4>
                       <div className="space-y-1">
                         <PaymentItem
-                          label="Nightly Rate (Room Only)"
-                          amount={selectedGuest.rate?.roomPrice || 0}
+                          label={`Room Charges (${nights} night${nights > 1 ? "s" : ""} x ${roomPrice})`}
+                          amount={totalRoomCharges}
                         />
+                        {(sstAmount || tourismTaxAmount) > 0 && (
+                          <>
+                            <PaymentItem
+                              label="Tax & Service Charges"
+                              amount={
+                                (sstAmount || 0) + (tourismTaxAmount || 0)
+                              }
+                            />
+                            <PaymentItem
+                              label="Gross Charges"
+                              amount={grandTotal}
+                            />
+                          </>
+                        )}
                         <PaymentItem
-                          label="Tax & Service Charges"
-                          amount={
-                            (selectedGuest.rate?.subtotal || 0) -
-                            (selectedGuest.rate?.roomPrice || 0)
-                          }
+                          label="Discounts & Adjustments"
+                          amount={discountAmount}
                         />
                         <Separator className="my-2" />
                         <PaymentItem
                           label="Total Reservation Cost"
-                          amount={selectedGuest.rate?.subtotal || 0}
+                          amount={subTotal}
                           isTotal
                         />
                       </div>
