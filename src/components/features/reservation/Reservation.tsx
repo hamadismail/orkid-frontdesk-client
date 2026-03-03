@@ -134,7 +134,7 @@ export default function Reservation() {
       </div>
       <div className="flex items-center justify-between">
         <Input
-          placeholder="Search by guest name or reservation no."
+          placeholder="Search by guest, room no. or reservation no."
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
