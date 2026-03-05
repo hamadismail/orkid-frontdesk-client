@@ -73,7 +73,7 @@ const STATUS_CONFIG = {
     description: "Room is not available",
   },
   [RoomStatus.NO_SHOW]: {
-    variant: "destructive" as const,
+    variant: "outline" as const,
     label: "No Show",
     description: "Guest did not arrive",
   },
@@ -144,8 +144,10 @@ export default function RoomDetailsDialog({
             "bg-purple-50 dark:bg-purple-950/30",
           roomStatus === RoomStatus.OUT_OF_ORDER &&
             "bg-gray-50 dark:bg-gray-950/30",
-          roomStatus === RoomStatus.NO_SHOW &&
+          roomStatus === RoomStatus.SERVICE &&
             "bg-purple-50 dark:bg-purple-950/30",
+          roomStatus === RoomStatus.NO_SHOW &&
+            "bg-orange-50 dark:bg-orange-950/30",
         )}
       >
         <DialogHeader className="space-y-3">

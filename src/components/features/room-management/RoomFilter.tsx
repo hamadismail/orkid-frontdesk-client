@@ -11,6 +11,8 @@ import {
   Brush,
   Hotel,
   ChevronDown,
+  UserLockIcon,
+  Lock,
 } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
@@ -76,13 +78,13 @@ const STATUS_OPTIONS = [
   {
     value: RoomStatus.NO_SHOW,
     label: "No Show",
-    icon: User,
+    icon: UserLockIcon,
     color: "bg-purple-100 text-purple-700",
   },
   {
     value: RoomStatus.OUT_OF_ORDER,
     label: "Out Of Order",
-    icon: User,
+    icon: Lock,
     color: "bg-purple-100 text-purple-700",
   },
 ] as const;

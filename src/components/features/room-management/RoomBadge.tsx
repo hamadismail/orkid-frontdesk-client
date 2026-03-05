@@ -38,7 +38,7 @@ export default function RoomBadge({ roomStatus }: RoomBadgeProps) {
       text: "OUT OF ORDER",
     },
     [RoomStatus.NO_SHOW]: {
-      className: "bg-purple-100 text-purple-800 border-purple-300",
+      className: "bg-orange-100 text-orange-800 border-orange-300",
       text: "NO SHOW",
     },
   };

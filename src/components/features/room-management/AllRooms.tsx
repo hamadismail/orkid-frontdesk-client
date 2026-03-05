@@ -102,9 +102,9 @@ function AllRooms() {
             {roomStatusCounts[RoomStatus.SERVICE]}
           </span>
         </div>
-        <div className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold border border-purple-200">
-          <span>No Show</span>
-          <span className="bg-purple-800 text-white px-2 py-0.5 rounded-full text-xs">
+        <div className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-semibold border border-orange-200">
+          <span>NO SHOW</span>
+          <span className="bg-orange-800 text-white px-2 py-0.5 rounded-full text-xs">
             {roomStatusCounts[RoomStatus.NO_SHOW]}
           </span>
         </div>
