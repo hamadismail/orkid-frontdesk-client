@@ -13,11 +13,7 @@ import {
   min,
   isSameDay,
 } from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CalendarDays,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { cn } from "@/src/lib/utils";
 import { GuestDetailsDialog } from "@/src/shared/GuestDetailsDialog";
@@ -45,13 +41,14 @@ function StayViewPage() {
   });
   const { data: reservations, isLoading: ReserveLoading } = useQuery({
     queryKey: ["reservations", "stayview"],
-    queryFn: () => getAllReservations({
-      limit: 1000,
-      status: [
-        RESERVATION_STATUS.CHECKED_IN,
-        RESERVATION_STATUS.RESERVED
-      ].join(",")
-    }),
+    queryFn: () =>
+      getAllReservations({
+        limit: 1000,
+        status: [
+          RESERVATION_STATUS.CHECKED_IN,
+          RESERVATION_STATUS.RESERVED,
+        ].join(","),
+      }),
   });
 
   const allRooms = useMemo(() => (rooms as any)?.rooms || [], [rooms]);
@@ -258,7 +255,7 @@ function StayViewPage() {
                           const guest = res.guestId as unknown as IGuest;
                           return (
                             <div
-                              key={res._id}
+                              key={res._id!.toString()}
                               onClick={() => handleViewGuest(res)}
                               className={cn(
                                 "absolute inset-y-1 mx-0.5 rounded text-white text-[10px] font-bold flex items-center justify-center cursor-pointer border",

@@ -61,7 +61,7 @@ const PrintableTable = React.forwardRef<
             const guest = res.guestId as unknown as IGuest;
             const room = res.roomId as any;
             return (
-              <TableRow key={res._id} className="border-black">
+              <TableRow key={res._id!.toString()} className="border-black">
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{room?.roomNo}</TableCell>
                 <TableCell>{guest?.name?.slice(0, 20)}</TableCell>

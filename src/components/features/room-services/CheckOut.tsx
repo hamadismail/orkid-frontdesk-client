@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState } from "react";
@@ -16,7 +17,6 @@ import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import {
   LogOut,
-  CheckCircle,
   User,
   Calendar,
   Loader2,
@@ -49,7 +49,7 @@ export default function CheckOut({
 
   const { mutate: checkOutMutation, isPending } = useMutation({
     mutationFn: async () => {
-      return await checkOutReservation(reservation?._id!);
+      return await checkOutReservation(reservation?._id!.toString());
     },
     onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
@@ -72,7 +72,11 @@ export default function CheckOut({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size} className={cn("gap-2", className)}>
+        <Button
+          variant={variant}
+          size={size}
+          className={cn("gap-2", className)}
+        >
           <LogOut className="h-4 w-4" />
           Check Out
         </Button>
@@ -82,7 +86,8 @@ export default function CheckOut({
         <DialogHeader>
           <DialogTitle>Confirm Check Out</DialogTitle>
           <DialogDescription>
-            Complete the checkout process for Room {(reservation.roomId as any)?.roomNo}.
+            Complete the checkout process for Room{" "}
+            {(reservation.roomId as any)?.roomNo}.
           </DialogDescription>
         </DialogHeader>
 
@@ -95,39 +100,47 @@ export default function CheckOut({
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Calendar className="h-4 w-4" />
-                <span>Stay: {format(new Date(reservation.stay.arrival), "PP")} - {format(new Date(reservation.stay.departure), "PP")}</span>
+                <span>
+                  Stay: {format(new Date(reservation.stay.arrival), "PP")} -{" "}
+                  {format(new Date(reservation.stay.departure), "PP")}
+                </span>
               </div>
             </CardContent>
           </Card>
 
           <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
-              <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                      <Receipt className="h-4 w-4" />
-                      <span className="text-sm">Balance Due</span>
-                  </div>
-                  <Badge variant={isFullyPaid ? "outline" : "destructive"}>
-                      RM {dueAmount.toFixed(2)}
-                  </Badge>
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4" />
+                <span className="text-sm">Balance Due</span>
               </div>
+              <Badge variant={isFullyPaid ? "outline" : "destructive"}>
+                RM {dueAmount.toFixed(2)}
+              </Badge>
+            </div>
           </div>
 
           <div className="flex items-start gap-2 pt-2">
-              <Checkbox 
-                id="ack" 
-                checked={acknowledged} 
-                onCheckedChange={(c) => setAcknowledged(!!c)} 
-              />
-              <label htmlFor="ack" className="text-sm cursor-pointer leading-none">
-                  I confirm all belongings are cleared and room keys returned.
-              </label>
+            <Checkbox
+              id="ack"
+              checked={acknowledged}
+              onCheckedChange={(c) => setAcknowledged(!!c)}
+            />
+            <label
+              htmlFor="ack"
+              className="text-sm cursor-pointer leading-none"
+            >
+              I confirm all belongings are cleared and room keys returned.
+            </label>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={() => checkOutMutation()} 
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => checkOutMutation()}
             disabled={isPending || !acknowledged}
             variant={isFullyPaid ? "default" : "destructive"}
           >

@@ -357,7 +357,7 @@ export default function GuestTable() {
                         isExpanded &&
                         reservations.map((res) => (
                           <TableRow
-                            key={res._id}
+                            key={res._id?.toString()}
                             className="bg-muted/30 hover:bg-muted/50 border-l-4 border-l-primary"
                             onClick={() => handleViewGuest(res)}
                           >

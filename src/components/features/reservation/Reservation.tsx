@@ -263,7 +263,7 @@ export default function Reservation() {
                       isExpanded &&
                       reservations.map((res) => (
                         <TableRow
-                          key={res._id}
+                          key={res._id?.toString()}
                           className="bg-muted/5 hover:bg-muted/10"
                           onClick={() => handleRowClick(res)}
                         >

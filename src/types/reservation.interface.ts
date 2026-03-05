@@ -1,43 +1,52 @@
-import { OTAS, RESERVATION_STATUS } from './enums';
-import { IGuest } from './guest.interface';
-import { IRoom } from './room.interface';
-import { IReservationGroup } from './group.interface';
+import { Types } from "mongoose";
+import {
+  DEPOSIT_METHOD,
+  OTAS,
+  PAYMENT_METHOD,
+  RESERVATION_STATUS,
+} from "./enums";
+
+export interface IReservationStay {
+  arrival: Date;
+  departure: Date;
+  adults: number;
+  children: number;
+}
+
+export interface IReservationRate {
+  roomPrice: number;
+  sst: number;
+  tourismTax: number;
+  discount: number;
+  subtotal: number;
+}
+
+export interface IReservationPayment {
+  paidAmount: number;
+  dueAmount: number;
+  deposit: number;
+  depositMethod?: DEPOSIT_METHOD;
+  paymentMethod?: PAYMENT_METHOD;
+}
 
 export interface IReservation {
-  _id?: string;
+  _id?: Types.ObjectId;
   confirmationNo: string;
-  groupId: string | IReservationGroup;
-  guestId: string | IGuest;
-  roomId: string | IRoom;
+  groupId: Types.ObjectId;
+  guestId: Types.ObjectId;
+  roomId: Types.ObjectId;
   status: RESERVATION_STATUS;
-  stay: {
-    arrival: string | Date;
-    departure: string | Date;
-    adults: number;
-    children: number;
-  };
-  rate: {
-    roomPrice: number;
-    sst?: number;
-    tourismTax?: number;
-    discount?: number;
-    subtotal: number;
-  };
-  payment: {
-    paidAmount: number;
-    dueAmount: number;
-    deposit?: number;
-    depositMethod?: string;
-    paymentMethod?: string;
-    remarks?: string;
-  };
+  stay: IReservationStay;
+  rate: IReservationRate;
+  payment: IReservationPayment;
+  remarks?: string;
   source?: OTAS;
   refId?: string;
-  cancelledAt?: string | Date;
+  cancelledAt?: Date;
   cancelReason?: string;
-  checkedInAt?: string | Date;
-  checkedOutAt?: string | Date;
-  movedFromRoomId?: string | IRoom;
-  createdAt?: string;
-  updatedAt?: string;
+  checkedInAt?: Date;
+  checkedOutAt?: Date;
+  movedFromRoomId?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

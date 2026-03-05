@@ -42,7 +42,7 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
 
   const { mutate: amendStayMutation, isPending } = useMutation({
     mutationFn: async (newDates: { arrival: Date; departure: Date }) => {
-      return await amendStay(reservation._id!, newDates);
+      return await amendStay(reservation._id!.toString(), newDates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });

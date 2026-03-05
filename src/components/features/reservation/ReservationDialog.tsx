@@ -13,6 +13,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { IRoom } from "@/src/types/room.interface";
 import {
+  DEPOSIT_METHOD,
   OTAS,
   PAYMENT_METHOD,
   RESERVATION_STATUS,
@@ -258,9 +259,9 @@ export function ReservationDialog({
             PAYMENT_METHOD.CASH,
           depositAmount: existingReservation.payment.deposit?.toString() || "",
           depositMethod:
-            (existingReservation.payment.depositMethod as PAYMENT_METHOD) ||
-            PAYMENT_METHOD.CASH,
-          remarks: existingReservation.payment.remarks || "",
+            (existingReservation.payment.depositMethod as DEPOSIT_METHOD) ||
+            DEPOSIT_METHOD.CASH,
+          remarks: existingReservation.remarks || "",
           sst: existingReservation.rate.sst?.toString() || "",
           tourismTax: existingReservation.rate.tourismTax?.toString() || "",
           discount: existingReservation.rate.discount?.toString() || "",
@@ -414,17 +415,17 @@ export function ReservationDialog({
         const payload = {
           refId: data.refId,
           source: data.source,
+          remarks: data.remarks,
           payment: {
             paidAmount: parseFloat(data.paidAmount || "0") || 0,
             dueAmount: parseFloat(calculateDueAmount()) || 0,
             deposit: parseFloat(data.depositAmount || "0") || 0,
             depositMethod: data.depositMethod,
             paymentMethod: data.paymentMethod,
-            remarks: data.remarks,
           },
         };
         const response = await checkInReservation(
-          existingReservation._id,
+          existingReservation._id.toString(),
           payload,
         );
         if (response) {
@@ -491,6 +492,7 @@ export function ReservationDialog({
               ...guestData,
               roomId: selectedRoom._id,
               status: status,
+              remarks: data.remarks,
               stay: {
                 arrival: normalizeToMalaysiaMidnight(data.arrivalDate),
                 departure: normalizeToMalaysiaMidnight(data.departureDate),
@@ -514,7 +516,6 @@ export function ReservationDialog({
                 deposit: parseFloat(data.depositAmount || "0") || 0,
                 depositMethod: data.depositMethod,
                 paymentMethod: data.paymentMethod,
-                remarks: data.remarks,
               },
             };
           }),
@@ -556,10 +557,10 @@ export function ReservationDialog({
             deposit: parseFloat(data.depositAmount || "0") || 0,
             depositMethod: data.depositMethod,
             paymentMethod: data.paymentMethod,
-            remarks: data.remarks,
           },
           source: data.source as any,
           refId: data.refId,
+          remarks: data.remarks,
         };
         const response = await createReservation(payload as any);
         if (response) {

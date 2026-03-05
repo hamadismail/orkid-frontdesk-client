@@ -180,7 +180,28 @@ export default function RoomDetailsDialog({
                   </div>
                 </div>
               </div>
+              {reservation?.confirmationNo && (
+                <div className="text-right">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    Conf. No
+                  </div>
+                  <div className="text-sm font-mono font-bold text-blue-600">
+                    {reservation.confirmationNo}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {reservation?.remarks && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
+                <div className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  Remarks
+                </div>
+                <p className="text-sm italic text-blue-800 dark:text-blue-300">
+                  {reservation.remarks}
+                </p>
+              </div>
+            )}
 
             {(arrival || departure) && (
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -255,7 +276,7 @@ export default function RoomDetailsDialog({
           <div className="flex gap-2 justify-end">
             {reservation?._id && (
               <CancelReservationButton
-                reservationId={reservation._id}
+                reservationId={reservation._id.toString()}
                 onClose={() => setOpen(false)}
               />
             )}
@@ -290,7 +311,7 @@ export default function RoomDetailsDialog({
             {reservation && (
               <>
                 <MoveRoom
-                  reservationId={reservation._id || ""}
+                  reservationId={reservation._id?.toString() || ""}
                   currentRoom={room as any}
                   onClose={() => setOpen(false)}
                 />

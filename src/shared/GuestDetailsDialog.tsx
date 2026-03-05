@@ -316,7 +316,7 @@ export function GuestDetailsDialog({
                       <MessageSquare size={14} /> Internal Remarks
                     </h4>
                     <p className="text-sm italic text-muted-foreground leading-relaxed">
-                      {payment.remarks ||
+                      {selectedGuest.remarks ||
                         "No special instructions or remarks provided for this guest."}
                     </p>
                   </CardContent>
@@ -475,7 +475,7 @@ export function GuestDetailsDialog({
                       className="border-primary text-primary hover:bg-primary/5"
                     />
                     <MoveRoom
-                      reservationId={selectedGuest._id!}
+                      reservationId={selectedGuest._id!.toString()}
                       currentRoom={room as any}
                       onClose={() => setIsDialogOpen(false)}
                       variant="outline"
@@ -493,13 +493,13 @@ export function GuestDetailsDialog({
                       onClose={() => setIsDialogOpen(false)}
                     />
                     <MoveRoom
-                      reservationId={selectedGuest._id!}
+                      reservationId={selectedGuest._id!.toString()}
                       currentRoom={room as any}
                       onClose={() => setIsDialogOpen(false)}
                       variant="outline"
                     />
                     <CancelReservationButton
-                      reservationId={selectedGuest._id!}
+                      reservationId={selectedGuest._id!.toString()}
                       onClose={() => setIsDialogOpen(false)}
                     />
                   </>
