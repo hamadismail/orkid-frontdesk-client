@@ -132,8 +132,11 @@ function PaymentTable() {
               <SelectItem value={RESERVATION_STATUS.CHECKED_OUT}>
                 Checked Out
               </SelectItem>
-              <SelectItem value={RESERVATION_STATUS.CONFIRMED}>
-                Confirmed
+              <SelectItem value={RESERVATION_STATUS.RESERVED}>
+                Reserved
+              </SelectItem>
+              <SelectItem value={RESERVATION_STATUS.CANCELLED}>
+                Cancelled
               </SelectItem>
             </SelectContent>
           </Select>
@@ -186,7 +189,7 @@ function PaymentTable() {
                     <TableCell>
                       <div className="font-medium">{guest?.name}</div>
                       {item.groupName &&
-                        item.groupName !== "Single Booking" && 
+                        item.groupName !== "Single Booking" &&
                         !item.groupName.startsWith("Single -") && (
                           <div className="text-xs text-primary font-semibold">
                             Group: {item.groupName}
@@ -224,8 +227,8 @@ function PaymentTable() {
                       <Badge variant="outline">{item.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      <PaymentModal 
-                        reservation={item.reservation} 
+                      <PaymentModal
+                        reservation={item.reservation}
                         isGroup={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -")}
                         groupId={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -") ? item._id : undefined}
                       />
