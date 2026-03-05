@@ -3,7 +3,6 @@ import {
   Search,
   Filter,
   X,
-  Calendar,
   Layers,
   Bed,
   CheckCircle,
@@ -27,8 +26,6 @@ import { RoomStatus, RoomType } from "@/src/types/enums";
 import { cn } from "@/src/lib/utils";
 
 type RoomFilterProps = {
-  dateFilter: string;
-  setDateFilter: React.Dispatch<React.SetStateAction<string>>;
   setFloorFilter: React.Dispatch<React.SetStateAction<string>>;
   setStatusFilter: React.Dispatch<React.SetStateAction<"all" | RoomStatus>>;
   setTypeFilter: React.Dispatch<React.SetStateAction<"all" | RoomType>>;
@@ -76,6 +73,18 @@ const STATUS_OPTIONS = [
     icon: User,
     color: "bg-purple-100 text-purple-700",
   },
+  {
+    value: RoomStatus.NO_SHOW,
+    label: "No Show",
+    icon: User,
+    color: "bg-purple-100 text-purple-700",
+  },
+  {
+    value: RoomStatus.OUT_OF_ORDER,
+    label: "Out Of Order",
+    icon: User,
+    color: "bg-purple-100 text-purple-700",
+  },
 ] as const;
 
 const FLOOR_OPTIONS = [
@@ -100,8 +109,6 @@ const ROOM_TYPE_ICONS: Record<
 } as const;
 
 export default function RoomFilter({
-  dateFilter,
-  setDateFilter,
   setFloorFilter,
   setStatusFilter,
   setTypeFilter,
@@ -131,7 +138,6 @@ export default function RoomFilter({
   const handleClearAll = () => {
     const today = new Date();
     today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
-    setDateFilter(today.toISOString().split("T")[0]);
     setFloorFilter("all");
     setStatusFilter("all");
     setTypeFilter("all");
@@ -259,32 +265,6 @@ export default function RoomFilter({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Date Filter */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium flex items-center gap-2">
-                <Calendar className="h-3.5 w-3.5" />
-                Date
-              </label>
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => {
-                  setDateFilter(e.target.value);
-                  if (e.target.value) {
-                    setActiveFilters((prev) => [
-                      ...prev.filter((f) => f !== "date"),
-                      "date",
-                    ]);
-                  } else {
-                    setActiveFilters((prev) =>
-                      prev.filter((f) => f !== "date")
-                    );
-                  }
-                }}
-                className="h-9"
-              />
-            </div>
-
             {/* Floor Filter */}
             <div className="space-y-2">
               <label className="text-xs font-medium flex items-center gap-2">
@@ -361,48 +341,6 @@ export default function RoomFilter({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Status Filter */}
-            <div className="space-y-2">
-              <label className="text-xs font-medium flex items-center gap-2">
-                <Filter className="h-3.5 w-3.5" />
-                Status
-              </label>
-              <Select
-                onValueChange={(value: RoomStatus | "all") => {
-                  setStatusFilter(value);
-                  setQuickStatus(value);
-                  if (value !== "all") {
-                    setActiveFilters((prev) => [
-                      ...prev.filter((f) => f !== "status"),
-                      "status",
-                    ]);
-                  } else {
-                    setActiveFilters((prev) =>
-                      prev.filter((f) => f !== "status")
-                    );
-                  }
-                }}
-                value={quickStatus}
-              >
-                <SelectTrigger className="h-9 w-full">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => {
-                    const Icon = option.icon;
-                    return (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5" />
-                          {option.label}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {/* Active Filters Display */}
@@ -422,20 +360,6 @@ export default function RoomFilter({
                           setRoomNumberFilter("");
                           setActiveFilters((prev) =>
                             prev.filter((f) => f !== "search")
-                          );
-                        }}
-                      />
-                    </Badge>
-                  )}
-                  {activeFilters.includes("date") && dateFilter && (
-                    <Badge variant="secondary" className="text-xs gap-1">
-                      Date: {dateFilter}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          setDateFilter("");
-                          setActiveFilters((prev) =>
-                            prev.filter((f) => f !== "date")
                           );
                         }}
                       />

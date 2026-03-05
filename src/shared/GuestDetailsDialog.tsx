@@ -131,6 +131,12 @@ const getStatusBadge = (status: RESERVATION_STATUS) => {
       return <Badge className="bg-blue-500 hover:bg-blue-600">Reserved</Badge>;
     case RESERVATION_STATUS.CHECKED_OUT:
       return <Badge variant="secondary">Checked Out</Badge>;
+    case RESERVATION_STATUS.NO_SHOW:
+      return (
+        <Badge className="bg-purple-300 hover:bg-purple-400" variant="outline">
+          No Show
+        </Badge>
+      );
     case RESERVATION_STATUS.CANCELLED:
       return <Badge variant="destructive">Cancelled</Badge>;
     default:

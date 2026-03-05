@@ -19,21 +19,15 @@ function AllRooms() {
 
   const [typeFilter, setTypeFilter] = useState<RoomType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "all">("all");
-  const [dateFilter, setDateFilter] = useState<string>(() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().split("T")[0];
-  });
   const [roomNumberFilter, setRoomNumberFilter] = useState("");
 
   const { data: roomData, isLoading: RoomLoading } = useQuery({
-    queryKey: ["rooms", floorFilter, typeFilter, statusFilter, dateFilter, roomNumberFilter],
+    queryKey: ["rooms", floorFilter, typeFilter, statusFilter, roomNumberFilter],
     queryFn: () => getAllRooms({
       roomFloor: floorFilter,
       roomType: typeFilter,
       roomStatus: statusFilter,
       search: roomNumberFilter,
-      date: dateFilter
     }),
   });
 
@@ -47,6 +41,7 @@ function AllRooms() {
       [RoomStatus.DUE_OUT]: 0,
       [RoomStatus.OUT_OF_ORDER]: 0,
       [RoomStatus.SERVICE]: 0,
+      [RoomStatus.NO_SHOW]: 0,
     };
   }, [roomData]);
 
@@ -107,12 +102,16 @@ function AllRooms() {
             {roomStatusCounts[RoomStatus.SERVICE]}
           </span>
         </div>
+        <div className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold border border-purple-200">
+          <span>No Show</span>
+          <span className="bg-purple-800 text-white px-2 py-0.5 rounded-full text-xs">
+            {roomStatusCounts[RoomStatus.NO_SHOW]}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4">
         <RoomFilter
-          dateFilter={dateFilter}
-          setDateFilter={setDateFilter}
           setFloorFilter={setFloorFilter}
           setTypeFilter={setTypeFilter}
           setStatusFilter={setStatusFilter}

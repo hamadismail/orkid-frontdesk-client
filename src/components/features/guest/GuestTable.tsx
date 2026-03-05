@@ -323,7 +323,7 @@ export default function GuestTable() {
                           <Badge
                             variant={
                               reservations[0].status ===
-                              RESERVATION_STATUS.CHECKED_IN
+                              RESERVATION_STATUS.CANCELLED
                                 ? "destructive"
                                 : "outline"
                             }

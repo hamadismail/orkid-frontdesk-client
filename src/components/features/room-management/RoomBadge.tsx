@@ -34,8 +34,12 @@ export default function RoomBadge({ roomStatus }: RoomBadgeProps) {
       text: "SERVICE",
     },
     [RoomStatus.OUT_OF_ORDER]: {
-        className: "bg-gray-800 text-white",
-        text: "OUT OF ORDER",
+      className: "bg-gray-800 text-white",
+      text: "OUT OF ORDER",
+    },
+    [RoomStatus.NO_SHOW]: {
+      className: "bg-purple-100 text-purple-800 border-purple-300",
+      text: "NO SHOW",
     },
   };
 
@@ -45,9 +49,7 @@ export default function RoomBadge({ roomStatus }: RoomBadgeProps) {
   };
 
   return (
-    <Badge
-      className={`flex items-center gap-1 ${config.className}`}
-    >
+    <Badge className={`flex items-center gap-1 ${config.className}`}>
       <Circle className="h-2 w-2 fill-current" />
       {config.text}
     </Badge>

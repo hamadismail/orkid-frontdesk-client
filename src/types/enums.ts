@@ -62,4 +62,5 @@ export enum RoomStatus {
   DIRTY = 'DIRTY',
   SERVICE = 'SERVICE',
   OUT_OF_ORDER = 'OUT_OF_ORDER',
+  NO_SHOW = 'NO_SHOW',
 }

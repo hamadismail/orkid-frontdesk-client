@@ -50,6 +50,10 @@ export default function RoomCard({
               "bg-red-100 border-red-400 dark:bg-red-950 dark:border-red-800",
             roomStatus === RoomStatus.SERVICE &&
               "bg-purple-100 border-purple-400 dark:bg-purple-950 dark:border-purple-800",
+            roomStatus === RoomStatus.OUT_OF_ORDER &&
+              "bg-gray-100 border-gray-400 dark:bg-gray-950 dark:border-gray-800",
+            roomStatus === RoomStatus.NO_SHOW &&
+              "bg-purple-100 border-purple-400 dark:bg-purple-950 dark:border-purple-800",
           )}
         >
           {/* Card Heading */}

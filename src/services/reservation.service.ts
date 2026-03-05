@@ -108,3 +108,13 @@ export const extendStay = async (id: string, payload: any) => {
   const result = await res.json();
   return result.data || {};
 };
+
+export const markAsNoShowReservation = async (id: string) => {
+  const res = await fetch(`${API_BASE_URL}/reservations/${id}/mark-as-no-show`, {
+    method: 'POST',
+    credentials: 'include',
+  });
+  const result = await res.json();
+  if (!res.ok) throw new Error(result.message || 'Failed to mark as No-Show');
+  return result.data || {};
+};

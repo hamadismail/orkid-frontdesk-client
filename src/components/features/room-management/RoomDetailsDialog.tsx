@@ -13,6 +13,7 @@ import { Button } from "@/src/components/ui/button";
 import StayOver from "../room-services/StayOver";
 import CheckOut from "../room-services/CheckOut";
 import CancelReservationButton from "../room-services/CancelReservationButton";
+import MarkAsNoShow from "../room-services/MarkAsNoShow";
 import RoomService from "../room-services/RoomService";
 import MoveRoom from "../room-services/MoveRoom";
 import ToggleRoomStatus from "../room-services/ToggleRoomStatus";
@@ -70,6 +71,11 @@ const STATUS_CONFIG = {
     variant: "destructive" as const,
     label: "Out of Order",
     description: "Room is not available",
+  },
+  [RoomStatus.NO_SHOW]: {
+    variant: "destructive" as const,
+    label: "No Show",
+    description: "Guest did not arrive",
   },
 } as const;
 
@@ -135,6 +141,10 @@ export default function RoomDetailsDialog({
           roomStatus === RoomStatus.DIRTY &&
             "bg-orange-50 dark:bg-orange-950/30",
           roomStatus === RoomStatus.SERVICE &&
+            "bg-purple-50 dark:bg-purple-950/30",
+          roomStatus === RoomStatus.OUT_OF_ORDER &&
+            "bg-gray-50 dark:bg-gray-950/30",
+          roomStatus === RoomStatus.NO_SHOW &&
             "bg-purple-50 dark:bg-purple-950/30",
         )}
       >
@@ -272,13 +282,23 @@ export default function RoomDetailsDialog({
           </div>
         )}
 
-        {roomStatus === RoomStatus.RESERVED && (
+        {roomStatus === RoomStatus.NO_SHOW && (
           <div className="flex gap-2 justify-end">
             {reservation?._id && (
-              <CancelReservationButton
-                reservationId={reservation._id.toString()}
-                onClose={() => setOpen(false)}
-              />
+              <>
+                {arrival &&
+                  new Date(arrival) <
+                    new Date(new Date().setHours(0, 0, 0, 0)) && (
+                    <MarkAsNoShow
+                      reservationId={reservation._id.toString()}
+                      onClose={() => setOpen(false)}
+                    />
+                  )}
+                <CancelReservationButton
+                  reservationId={reservation._id.toString()}
+                  onClose={() => setOpen(false)}
+                />
+              </>
             )}
             <Button
               variant="default"
@@ -291,6 +311,21 @@ export default function RoomDetailsDialog({
             </Button>
           </div>
         )}
+
+        {/* Handling visual AVAILABLE but has ghost reservation (missed check-in) */}
+        {roomStatus === RoomStatus.AVAILABLE &&
+          !hasGuest &&
+          reservation?._id && (
+            <div className="flex justify-end gap-2 pt-2 border-t mt-2">
+              <span className="text-[10px] text-orange-600 font-medium self-center mr-auto italic">
+                Missed Check-in
+              </span>
+              <MarkAsNoShow
+                reservationId={reservation._id.toString()}
+                onClose={() => setOpen(false)}
+              />
+            </div>
+          )}
 
         {roomStatus === RoomStatus.DIRTY && (
           <div className="flex flex-col gap-2">
