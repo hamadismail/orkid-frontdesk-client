@@ -60,7 +60,11 @@ export default function Reservation() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reservations", "list", page, searchQuery],
-    queryFn: () => getAllReservations({ page, search: searchQuery }),
+    queryFn: () => getAllReservations({ 
+      page, 
+      search: searchQuery,
+      status: RESERVATION_STATUS.RESERVED
+    }),
   });
 
   const { mutate: performBatchCheckIn, isPending: isCheckingIn } = useMutation({

@@ -67,28 +67,47 @@ export default function GuestTable() {
   const handleClearFilters = () => {
     setSearch("");
     setArrivalDate("");
-    setStatus("all");
+    setStatus(
+      `${RESERVATION_STATUS.CHECKED_IN},${RESERVATION_STATUS.CHECKED_OUT}`,
+    );
     setSortBy("createdAt");
     setPage(1);
   };
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["reservations", "guest-view", page, search, status, sortBy, arrivalDate],
-    queryFn: () => getAllReservations({
+    queryKey: [
+      "reservations",
+      "guest-view",
       page,
       search,
-      status: status === "all" ? undefined : status,
+      status,
       sortBy,
-      sortOrder: "desc",
-      arrival: arrivalDate || undefined,
-    }),
+      arrivalDate,
+    ],
+    queryFn: () =>
+      getAllReservations({
+        page,
+        search,
+        status:
+          status === "all"
+            ? `${RESERVATION_STATUS.CHECKED_IN},${RESERVATION_STATUS.CHECKED_OUT}`
+            : status,
+        sortBy,
+        sortOrder: "desc",
+        arrival: arrivalDate || undefined,
+      }),
   });
 
-  const { data: checkedInReservations, isLoading: isLoadingDeposits } = useQuery({
-    queryKey: ["reservations", "checked-in-report"],
-    queryFn: () => getAllReservations({ status: RESERVATION_STATUS.CHECKED_IN, limit: 1000 }),
-    enabled: isDepositReportOpen,
-  });
+  const { data: checkedInReservations, isLoading: isLoadingDeposits } =
+    useQuery({
+      queryKey: ["reservations", "checked-in-report"],
+      queryFn: () =>
+        getAllReservations({
+          status: RESERVATION_STATUS.CHECKED_IN,
+          limit: 1000,
+        }),
+      enabled: isDepositReportOpen,
+    });
 
   const allReservations = useMemo(() => {
     if (!data) return [];
@@ -142,13 +161,16 @@ export default function GuestTable() {
   });
 
   const formatDate = (date: any) =>
-    date ? format(new Date(date), "MMM d, HH:mm") : "-";
+    date ? format(new Date(date), "MMM d, hh:mm a") : "-";
 
   return (
     <div className="space-y-4 p-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Stays & Guest List</h1>
-        <Button onClick={() => setIsDepositReportOpen(true)} className="gap-2 bg-green-600 hover:bg-green-700">
+        <Button
+          onClick={() => setIsDepositReportOpen(true)}
+          className="gap-2 bg-green-600 hover:bg-green-700"
+        >
           <Printer className="h-4 w-4" /> Deposit Report
         </Button>
       </div>
@@ -188,12 +210,13 @@ export default function GuestTable() {
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {Object.values(RESERVATION_STATUS).map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value={RESERVATION_STATUS.CHECKED_IN}>
+              {RESERVATION_STATUS.CHECKED_IN}
+            </SelectItem>
+            <SelectItem value={RESERVATION_STATUS.CHECKED_OUT}>
+              {RESERVATION_STATUS.CHECKED_OUT}
+            </SelectItem>
           </SelectContent>
         </Select>
 
@@ -213,7 +236,10 @@ export default function GuestTable() {
           </SelectContent>
         </Select>
 
-        {(search || arrivalDate || status !== "all" || sortBy !== "createdAt") && (
+        {(search ||
+          arrivalDate ||
+          status !== "all" ||
+          sortBy !== "createdAt") && (
           <Button
             variant="ghost"
             onClick={handleClearFilters}
@@ -233,8 +259,7 @@ export default function GuestTable() {
               <TableHead>Guest Name</TableHead>
               <TableHead>Stay Duration</TableHead>
               <TableHead>Rooms</TableHead>
-              <TableHead>Actual In/Out</TableHead>
-              <TableHead>Activity</TableHead>
+              <TableHead>Check-In/Out Time</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -307,23 +332,19 @@ export default function GuestTable() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col text-[10px] leading-tight">
-                            <span className="text-muted-foreground">In: {formatDate(reservations[0].createdAt)}</span>
-                            <span>Out: {formatDate(reservations[0].checkedOutAt)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-[10px] leading-tight text-muted-foreground">
-                            {reservations[0].status === RESERVATION_STATUS.CANCELLED && (
-                                <span className="text-destructive font-bold">Cxl: {formatDate(reservations[0].cancelledAt)}</span>
-                            )}
-                            <span className="italic">Mod: {formatDate(reservations[0].updatedAt)}</span>
+                            <span className="text-muted-foreground">
+                              In: {formatDate(reservations[0].createdAt)}
+                            </span>
+                            <span>
+                              Out: {formatDate(reservations[0].checkedOutAt)}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
                               reservations[0].status ===
-                              RESERVATION_STATUS.CANCELLED
+                              RESERVATION_STATUS.CHECKED_OUT
                                 ? "destructive"
                                 : "outline"
                             }
@@ -377,16 +398,10 @@ export default function GuestTable() {
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-col text-[10px] leading-tight">
-                                <span className="text-muted-foreground">In: {formatDate(res.createdAt)}</span>
+                                <span className="text-muted-foreground">
+                                  In: {formatDate(res.createdAt)}
+                                </span>
                                 <span>Out: {formatDate(res.checkedOutAt)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col text-[10px] leading-tight text-muted-foreground">
-                                {res.status === RESERVATION_STATUS.CANCELLED && (
-                                    <span className="text-destructive font-bold">Cxl: {formatDate(res.cancelledAt)}</span>
-                                )}
-                                <span className="italic">Mod: {formatDate(res.updatedAt)}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -507,7 +522,10 @@ export default function GuestTable() {
             {isLoadingDeposits ? (
               <div className="flex justify-center p-8">Loading deposits...</div>
             ) : (
-              <PrintableTable ref={depositReportRef} deposits={checkedInReservations?.data || []} />
+              <PrintableTable
+                ref={depositReportRef}
+                deposits={checkedInReservations?.data || []}
+              />
             )}
           </div>
           <div className="flex justify-end gap-4 mt-4">
@@ -517,7 +535,10 @@ export default function GuestTable() {
             >
               Close
             </Button>
-            <Button onClick={() => handlePrintDepositReport()} disabled={isLoadingDeposits}>
+            <Button
+              onClick={() => handlePrintDepositReport()}
+              disabled={isLoadingDeposits}
+            >
               <Printer className="mr-2 h-4 w-4" /> Print Report
             </Button>
           </div>
