@@ -1154,11 +1154,20 @@ export function ReservationDialog({
                                       <SelectContent>
                                         {allRooms
                                           .filter((r: IRoom) => {
+                                            const currentRooms =
+                                              form.watch("rooms") || [];
+                                            const isAlreadySelected =
+                                              currentRooms.some(
+                                                (cr: any, idx: number) =>
+                                                  idx !== index &&
+                                                  cr.roomNo === r.roomNo,
+                                              );
+
                                             return (
                                               r.roomType ===
-                                              form.watch(
-                                                `rooms.${index}.roomType`,
-                                              )
+                                                form.watch(
+                                                  `rooms.${index}.roomType`,
+                                                ) && !isAlreadySelected
                                             );
                                           })
                                           .map((room: IRoom) => {
