@@ -284,6 +284,26 @@ export default function RoomDetailsDialog({
           </div>
         )}
 
+        {roomStatus === RoomStatus.RESERVED && (
+          <div className="flex gap-2 justify-end">
+            {reservation?._id && (
+              <CancelReservationButton
+                reservationId={reservation._id.toString()}
+                onClose={() => setOpen(false)}
+              />
+            )}
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-2"
+              onClick={handleCheckInClick}
+            >
+              <CalendarCheck className="h-4 w-4" />
+              Check-in
+            </Button>
+          </div>
+        )}
+
         {roomStatus === RoomStatus.NO_SHOW && (
           <div className="flex gap-2 justify-end">
             {reservation?._id && (
