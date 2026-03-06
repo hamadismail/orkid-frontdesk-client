@@ -6,11 +6,11 @@ import { Button } from "@/src/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
+  DialogTrigger,
+  DialogDescription,
 } from "@/src/components/ui/dialog";
 import { Input } from "@/src/components/ui/input";
 import { BedDouble, Loader2, DollarSign, CalendarDays } from "lucide-react";
@@ -32,6 +32,15 @@ import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import { Label } from "@/src/components/ui/label";
 import { extendStay } from "@/src/services/reservation.service";
 import { IReservation } from "@/src/types/reservation.interface";
+import { PAYMENT_METHOD } from "@/src/types/enums";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
+import { PaymentInvoice } from "@/src/shared/PaymentInvoice";
 
 type StayOverProps = {
   reservation: IReservation;
@@ -49,137 +58,316 @@ export default function StayOver({
   className,
 }: StayOverProps) {
   const [open, setOpen] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [paymentData, setPaymentData] = useState<any>(null);
+
   const [newDeparture, setNewDeparture] = useState<Date | undefined>(
     reservation?.stay?.departure
       ? addDays(new Date(reservation.stay.departure), 1)
       : undefined,
   );
-  const [extraCharge, setExtraCharge] = useState("0");
+
+  const [updatedRoomPrice, setUpdatedRoomPrice] = useState(
+    reservation?.rate?.roomPrice?.toString() || "0",
+  );
+  const [paidAmount, setPaidAmount] = useState("0");
+  const [paymentMethod, setPaymentMethod] = useState<PAYMENT_METHOD>(
+    PAYMENT_METHOD.CASH,
+  );
   const [remarks, setRemarks] = useState("");
+
   const queryClient = useQueryClient();
 
   const additionalNights = useMemo(() => {
     if (!newDeparture || !reservation?.stay?.departure) return 0;
-    return differenceInCalendarDays(
+    const nights = differenceInCalendarDays(
       startOfDay(newDeparture),
       startOfDay(new Date(reservation.stay.departure)),
     );
+    return Math.max(0, nights);
   }, [newDeparture, reservation?.stay?.departure]);
+
+  const extraCharge = useMemo(() => {
+    return additionalNights * parseFloat(updatedRoomPrice || "0");
+  }, [additionalNights, updatedRoomPrice]);
+
+  const totalDueAfterExtension = useMemo(() => {
+    return (reservation?.payment?.dueAmount || 0) + extraCharge;
+  }, [reservation?.payment?.dueAmount, extraCharge]);
+
+  const remainingDue = useMemo(() => {
+    return totalDueAfterExtension - parseFloat(paidAmount || "0");
+  }, [totalDueAfterExtension, paidAmount]);
 
   const { mutate: extendMutation, isPending } = useMutation({
     mutationFn: async () => {
       if (!reservation?._id) throw new Error("Reservation not found");
       if (!newDeparture) throw new Error("Select new departure date");
-      return await extendStay(reservation._id.toString(), {
+
+      const payload = {
         newDeparture: normalizeToMalaysiaMidnight(newDeparture),
-        extraCharge: parseFloat(extraCharge),
-        remarks,
-      });
+        extraCharge,
+        paidAmount: parseFloat(paidAmount || "0"),
+        paymentMethod,
+        remarks: remarks || `Stay extended by ${additionalNights} night(s)`,
+      };
+
+      return await extendStay(reservation._id.toString(), payload);
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
       queryClient.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Stay extended successfully");
-      setOpen(false);
-      onClose?.();
+
+      if (result.payment) {
+        // Prepare data for receipt
+        const res = result.reservation;
+        const guest = res.guestId;
+        const room = res.roomId;
+
+        setPaymentData({
+          guest: {
+            name: (guest as any).name,
+            phone: (guest as any).phone,
+            source: res.source,
+            refId: res.refId,
+          },
+          stay: {
+            arrival: res.stay.arrival,
+            departure: res.stay.departure,
+          },
+          room: {
+            number: (room as any).roomNo,
+            type: (room as any).roomType,
+          },
+          payment: {
+            paidAmount: result.payment.amount,
+            method: result.payment.paymentMethod,
+            remarks: result.payment.remarks,
+          },
+          paymentDate: result.payment.createdAt,
+          paymentId: result.payment._id?.toUpperCase(),
+        });
+        setShowReceipt(true);
+        setOpen(false); // Close extension input dialog
+      } else {
+        setOpen(false);
+        onClose?.();
+      }
     },
     onError: (error: any) => {
       toast.error("Extension failed", { description: error.message });
     },
-  });
+    });
 
-  if (!reservation) return null;
+    if (!reservation) return null;
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant={variant}
-          size={size}
-          className={cn("gap-2", className)}
-        >
-          <BedDouble className="h-4 w-4" />
-          Stay Over
-        </Button>
-      </DialogTrigger>
+    const handleCloseReceipt = (val: boolean) => {
+    setShowReceipt(val);
+    if (!val) {
+      onClose?.();
+    }
+    };
 
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Extend Stay</DialogTitle>
-          <DialogDescription>
-            Extend the stay for this reservation.
-          </DialogDescription>
-        </DialogHeader>
+    return (
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4" />
-              New Check-out Date
-            </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left"
-                >
-                  {newDeparture ? format(newDeparture, "PPP") : "Select date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <DatePicker
-                  mode="single"
-                  selected={newDeparture}
-                  onSelect={setNewDeparture}
-                  disabled={(date) =>
-                    date <= new Date(reservation.stay.departure)
-                  }
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="p-3 bg-muted rounded-lg flex justify-between items-center text-sm">
-            <span>Additional Nights</span>
-            <span className="font-bold">{additionalNights} nights</span>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Extra Charge
-            </Label>
-            <Input
-              type="number"
-              value={extraCharge}
-              onChange={(e) => setExtraCharge(e.target.value)}
-              placeholder="0.00"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Remarks (Optional)</Label>
-            <Input
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Latest stay remarks..."
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
+        <DialogTrigger asChild>
           <Button
-            onClick={() => extendMutation()}
-            disabled={isPending || !newDeparture}
+            variant={variant}
+            size={size}
+            className={cn("gap-2", className)}
           >
-            {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Confirm Extension
+            <BedDouble className="h-4 w-4" />
+            Stay Over
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </DialogTrigger>
+
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Extend Stay (Stay Over)</DialogTitle>
+            <DialogDescription>
+              Extend the stay and update payment details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  New Check-out Date
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
+                      {newDeparture
+                        ? format(newDeparture, "PPP")
+                        : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <DatePicker
+                      mode="single"
+                      selected={newDeparture}
+                      onSelect={setNewDeparture}
+                      disabled={(date) =>
+                        date <= new Date(reservation.stay.departure)
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Room Price (Per Night)
+                </Label>
+                <Input
+                  type="number"
+                  value={updatedRoomPrice}
+                  onChange={(e) => setUpdatedRoomPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Amount Paid Now</Label>
+                <Input
+                  type="number"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Method</Label>
+                <Select
+                  value={paymentMethod}
+                  onValueChange={(val) =>
+                    setPaymentMethod(val as PAYMENT_METHOD)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select Method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.values(PAYMENT_METHOD).map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Additional Nights</Label>
+                <div className="p-2 border rounded bg-muted font-bold text-center">
+                  {additionalNights} nights
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Extra Charge (Total)</Label>
+                <div className="p-2 border rounded bg-muted font-bold text-center text-blue-600">
+                  RM {extraCharge.toFixed(2)}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Remarks (Optional)</Label>
+              <Input
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Latest stay remarks..."
+              />
+            </div>
+
+            <div className="mt-2 p-3 bg-muted rounded-lg space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Current Balance Due:</span>
+                <span>
+                  RM {(reservation?.payment?.dueAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between text-blue-600 font-medium">
+                <span>Extension Charge ({additionalNights} nights):</span>
+                <span>RM {extraCharge.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 font-bold">
+                <span>Total Due After Extension:</span>
+                <span>RM {totalDueAfterExtension.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-green-600">
+                <span>Amount Paid Now:</span>
+                <span>- RM {parseFloat(paidAmount || "0").toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1 font-bold text-lg">
+                <span>Remaining Balance:</span>
+                <span
+                  className={
+                    remainingDue > 0 ? "text-red-600" : "text-green-600"
+                  }
+                >
+                  RM {remainingDue.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => extendMutation()}
+              disabled={isPending || additionalNights === 0}
+            >
+              {isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Confirm Extension
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReceipt} onOpenChange={handleCloseReceipt}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle className="text-lg font-semibold text-center">
+              Payment Receipt
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="px-6 py-4 overflow-y-auto max-h-[70vh]">
+            {paymentData && (
+              <PaymentInvoice
+                bookingInfo={paymentData}
+                isBooking={false}
+                printOnly={true}
+              />
+            )}
+          </div>
+
+          <div className="px-6 py-4 border-t bg-muted/50">
+            <Button
+              onClick={() => setShowReceipt(false)}
+              variant="outline"
+              className="w-full"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
