@@ -37,7 +37,7 @@ import { RESERVATION_STATUS } from "@/src/types/enums";
 function PaymentTable() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>("all");
   const [dueOnly, setDueOnly] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
@@ -46,7 +46,10 @@ function PaymentTable() {
       getAllReservations({
         page,
         search,
-        status: status === "ALL" || !status ? undefined : status,
+        status:
+          status === "all"
+            ? `${RESERVATION_STATUS.CHECKED_IN},${RESERVATION_STATUS.CHECKED_OUT}`
+            : status,
         due: dueOnly,
       }),
   });
@@ -76,7 +79,7 @@ function PaymentTable() {
       }
 
       const room = res.roomId as any;
-      if (room?.roomNo) {
+      if (room?.roomNo && !groups[groupId].rooms.includes(room.roomNo)) {
         groups[groupId].rooms.push(room.roomNo);
       }
 
@@ -125,18 +128,12 @@ function PaymentTable() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               <SelectItem value={RESERVATION_STATUS.CHECKED_IN}>
                 Checked In
               </SelectItem>
               <SelectItem value={RESERVATION_STATUS.CHECKED_OUT}>
                 Checked Out
-              </SelectItem>
-              <SelectItem value={RESERVATION_STATUS.RESERVED}>
-                Reserved
-              </SelectItem>
-              <SelectItem value={RESERVATION_STATUS.CANCELLED}>
-                Cancelled
               </SelectItem>
             </SelectContent>
           </Select>
@@ -229,8 +226,18 @@ function PaymentTable() {
                     <TableCell>
                       <PaymentModal
                         reservation={item.reservation}
-                        isGroup={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -")}
-                        groupId={item.groupName && item.groupName !== "Single Booking" && !item.groupName.startsWith("Single -") ? item._id : undefined}
+                        isGroup={
+                          item.groupName &&
+                          item.groupName !== "Single Booking" &&
+                          !item.groupName.startsWith("Single -")
+                        }
+                        groupId={
+                          item.groupName &&
+                          item.groupName !== "Single Booking" &&
+                          !item.groupName.startsWith("Single -")
+                            ? item._id
+                            : undefined
+                        }
                       />
                     </TableCell>
                   </TableRow>
