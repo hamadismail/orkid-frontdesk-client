@@ -21,7 +21,7 @@ import { IRoom } from "@/src/types/room.interface";
 import { RoomStatus } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
 import { format } from "date-fns";
-import { cn } from "@/src/lib/utils";
+import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import { ReservationDialog } from "../reservation/ReservationDialog";
 
 type RoomDetailsDialogProps = {
@@ -289,8 +289,8 @@ export default function RoomDetailsDialog({
             {reservation?._id && (
               <>
                 {arrival &&
-                  new Date(arrival) <
-                    new Date(new Date().setHours(0, 0, 0, 0)) && (
+                  normalizeToMalaysiaMidnight(arrival) <
+                    normalizeToMalaysiaMidnight(new Date()) && (
                     <MarkAsNoShow
                       reservationId={reservation._id.toString()}
                       onClose={() => setOpen(false)}

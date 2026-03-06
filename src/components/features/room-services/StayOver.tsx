@@ -28,7 +28,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
-import { cn } from "@/src/lib/utils";
+import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import { Label } from "@/src/components/ui/label";
 import { extendStay } from "@/src/services/reservation.service";
 import { IReservation } from "@/src/types/reservation.interface";
@@ -71,7 +71,7 @@ export default function StayOver({
       if (!reservation?._id) throw new Error("Reservation not found");
       if (!newDeparture) throw new Error("Select new departure date");
       return await extendStay(reservation._id.toString(), {
-        newDeparture,
+        newDeparture: normalizeToMalaysiaMidnight(newDeparture),
         extraCharge: parseFloat(extraCharge),
         remarks,
       });

@@ -15,7 +15,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
-import { cn } from "@/src/lib/utils";
+import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import { GuestDetailsDialog } from "@/src/shared/GuestDetailsDialog";
 import { RESERVATION_STATUS } from "@/src/types/enums";
 import { IReservation } from "@/src/types/reservation.interface";
@@ -60,7 +60,7 @@ function StayViewPage() {
     return [];
   }, [reservations]);
 
-  const [startDate, setStartDate] = useState(startOfWeek(new Date()));
+  const [startDate, setStartDate] = useState(normalizeToMalaysiaMidnight(startOfWeek(new Date())));
   const [selectedGuest, setSelectedGuest] = useState<IReservation | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -106,9 +106,9 @@ function StayViewPage() {
   const endDate = addDays(startDate, viewDays - 1);
   const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const handleNext = () => setStartDate(addDays(startDate, viewDays));
-  const handlePrev = () => setStartDate(subDays(startDate, viewDays));
-  const handleToday = () => setStartDate(startOfWeek(new Date()));
+  const handleNext = () => setStartDate(normalizeToMalaysiaMidnight(addDays(startDate, viewDays)));
+  const handlePrev = () => setStartDate(normalizeToMalaysiaMidnight(subDays(startDate, viewDays)));
+  const handleToday = () => setStartDate(normalizeToMalaysiaMidnight(startOfWeek(new Date())));
 
   const handleViewGuest = (res: IReservation) => {
     setSelectedGuest(res);
@@ -128,10 +128,8 @@ function StayViewPage() {
     arrival: Date | string,
     departure: Date | string,
   ) => {
-    const start = new Date(arrival);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(departure);
-    end.setHours(0, 0, 0, 0);
+    const start = normalizeToMalaysiaMidnight(arrival);
+    const end = normalizeToMalaysiaMidnight(departure);
 
     if (end < startDate || start > endDate) return null;
 

@@ -1009,7 +1009,7 @@ export function ReservationDialog({
                                   }}
                                   disabled={(date) =>
                                     date <
-                                    new Date(new Date().setHours(0, 0, 0, 0))
+                                    normalizeToMalaysiaMidnight(new Date())
                                   }
                                   numberOfMonths={2}
                                   className="p-3"

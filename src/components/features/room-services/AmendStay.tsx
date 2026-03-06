@@ -24,7 +24,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/src/components/ui/popover";
-import { cn } from "@/src/lib/utils";
+import { cn, normalizeToMalaysiaMidnight } from "@/src/lib/utils";
 import { amendStay } from "@/src/services/reservation.service";
 
 interface AmendStayProps {
@@ -42,7 +42,11 @@ export default function AmendStay({ reservation, onClose }: AmendStayProps) {
 
   const { mutate: amendStayMutation, isPending } = useMutation({
     mutationFn: async (newDates: { arrival: Date; departure: Date }) => {
-      return await amendStay(reservation._id!.toString(), newDates);
+      const normalizedDates = {
+        arrival: normalizeToMalaysiaMidnight(newDates.arrival),
+        departure: normalizeToMalaysiaMidnight(newDates.departure),
+      };
+      return await amendStay(reservation._id!.toString(), normalizedDates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
