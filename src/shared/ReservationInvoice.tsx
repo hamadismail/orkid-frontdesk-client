@@ -84,14 +84,11 @@ export default function ReservationInvoice({
     (acc, res) => acc + (res.rate?.subtotal || 0),
     0,
   );
-  const totalPaid = reservations.reduce(
-    (acc, res) => acc + (res.payment?.paidAmount || 0),
-    0,
-  );
-  const totalDue = reservations.reduce(
-    (acc, res) => acc + (res.payment?.dueAmount || 0),
-    0,
-  );
+
+  // Pull payment info from group level
+  const payment = group?.payment || { paidAmount: 0, dueAmount: grandTotal };
+  const totalPaid = payment.paidAmount || 0;
+  const totalDue = payment.dueAmount ?? (grandTotal - totalPaid);
 
   return (
     <div className="max-w-4xl mx-auto overflow-auto">

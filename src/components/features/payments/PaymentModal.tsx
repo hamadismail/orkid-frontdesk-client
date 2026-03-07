@@ -60,117 +60,45 @@ export default function PaymentModal({
       const amountToPay = parseFloat(amount);
       const remarksText = remarks || (isGroup ? "Group payment" : "Single payment");
 
-      if (isGroup && groupData?.reservations) {
-        let remaining = amountToPay;
-        const reservationsToPay = [...groupData.reservations].sort((a, b) =>
-            (b.payment?.dueAmount || 0) - (a.payment?.dueAmount || 0)
-        );
+      // With centralized architecture, we create one payment record for the group
+      const result = await createPayment({
+        groupId: groupId || (reservation.groupId as any)?._id || (reservation.groupId as any),
+        reservationId: isGroup ? undefined : reservation._id,
+        amount: amountToPay,
+        paymentMethod: method,
+        remarks: remarksText,
+        type: PAYMENT_TYPE.PAYMENT,
+        guestName: (reservation.guestId as any).name,
+      });
 
-        const results = [];
-        for (const res of reservationsToPay) {
-          if (remaining <= 0) break;
-          const due = res.payment?.dueAmount || 0;
-          if (due <= 0) continue;
+      // Prepare data for receipt
+      const res = currentReservation || reservation;
+      const guest = res.guestId as any;
+      const room = res.roomId as any;
 
-          const payForThis = Math.min(remaining, due);
-          const result = await createPayment({
-            reservationId: res._id,
-            amount: payForThis,
-            paymentMethod: method,
-            remarks: `${remarksText} (Split for Room ${(res.roomId as any)?.roomNo || "-"})`,
-            type: PAYMENT_TYPE.PAYMENT,
-            guestName: (res.guestId as any).name || (reservation.guestId as any).name,
-          });
-          results.push(result);
-          remaining -= payForThis;
-        }
-
-        // If there's still money left after clearing all dues, put it in the first reservation
-        if (remaining > 0 && groupData.reservations.length > 0) {
-            const result = await createPayment({
-                reservationId: groupData.reservations[0]._id,
-                amount: remaining,
-                paymentMethod: method,
-                remarks: `${remarksText} (Overpayment/Balance)`,
-                type: PAYMENT_TYPE.PAYMENT,
-                guestName: (groupData.reservations[0].guestId as any).name || (reservation.guestId as any).name,
-            });
-            results.push(result);
-        }
-
-        // Prepare data for receipt (simplified for group)
-        const primaryRes = groupData.reservations[0];
-        const guest = primaryRes.guestId;
-
-        return {
-            guest: {
-                name: (guest as any).name,
-                phone: (guest as any).phone,
-                source: primaryRes.source,
-                refId: primaryRes.refId
-            },
-            stay: {
-                arrival: primaryRes.stay.arrival,
-                departure: primaryRes.stay.departure
-            },
-            room: {
-                number: "Group Payment",
-                type: groupData.groupName
-            },
-            groupReservations: groupData.reservations.map((r: any) => ({
-                roomNo: (r.roomId as any)?.roomNo,
-                roomType: (r.roomId as any)?.roomType,
-                arrival: r.stay.arrival,
-                departure: r.stay.departure,
-                guestName: (r.guestId as any).name
-            })),
-            payment: {
-                paidAmount: amountToPay,
-                method: method,
-                remarks: remarksText
-            },
-            paymentDate: new Date(),
-            paymentId: results[0]?._id?.toUpperCase() || "GROUP"
-        };
-      } else {
-        const result = await createPayment({
-            reservationId: reservation._id,
-            amount: amountToPay,
-            paymentMethod: method,
-            remarks: remarksText,
-            type: PAYMENT_TYPE.PAYMENT,
-            guestName: (reservation.guestId as any).name,
-        });
-
-        // Prepare data for receipt
-        const res = currentReservation || reservation;
-        const guest = res.guestId as any;
-        const room = res.roomId as any;
-
-        return {
-            guest: {
-                name: guest.name,
-                phone: guest.phone,
-                source: res.source,
-                refId: res.refId
-            },
-            stay: {
-                arrival: res.stay.arrival,
-                departure: res.stay.departure
-            },
-            room: {
-                number: room.roomNo,
-                type: room.roomType
-            },
-            payment: {
-                paidAmount: result.amount || amountToPay,
-                method: result.paymentMethod || method,
-                remarks: result.remarks || remarksText
-            },
-            paymentDate: result.createdAt || new Date(),
-            paymentId: result._id?.toUpperCase()
-        };
-      }
+      return {
+        guest: {
+          name: guest.name,
+          phone: guest.phone,
+          source: res.source,
+          refId: res.refId
+        },
+        stay: {
+          arrival: res.stay.arrival,
+          departure: res.stay.departure
+        },
+        room: {
+          number: isGroup ? "GROUP" : room.roomNo,
+          type: isGroup ? (groupData?.groupName || "Group") : room.roomType
+        },
+        payment: {
+          paidAmount: result.amount || amountToPay,
+          method: result.paymentMethod || method,
+          remarks: result.remarks || remarksText
+        },
+        paymentDate: result.createdAt || new Date(),
+        paymentId: result._id?.toUpperCase()
+      };
     },
     onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ["reservations"] });
@@ -192,9 +120,10 @@ export default function PaymentModal({
     },
   });
 
+  const group = (reservation?.groupId as any) || (currentReservation?.groupId as any);
   const totalDue = isGroup
-    ? (groupData?.reservations?.reduce((acc: number, res: any) => acc + (res.payment?.dueAmount || 0), 0) || 0)
-    : (currentReservation?.payment?.dueAmount || 0);
+    ? (group?.payment?.dueAmount || groupData?.payment?.dueAmount || 0)
+    : (group?.payment?.dueAmount || 0);
 
   const isLoading = isGroup ? isLoadingGroup : isLoadingSingle;
 

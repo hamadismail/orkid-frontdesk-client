@@ -478,6 +478,13 @@ export default function GuestTable() {
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
           selectedGuest={selectedGuest}
+          groupReservations={
+            groupedReservations[
+              typeof selectedGuest.groupId === "object"
+                ? selectedGuest.groupId._id
+                : selectedGuest.groupId
+            ]
+          }
         />
       )}
 

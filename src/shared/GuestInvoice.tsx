@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React from "react";
 import { IReservation } from "@/src/types/reservation.interface";
@@ -42,11 +43,16 @@ export const GuestInvoice = React.forwardRef<HTMLDivElement, GuestInvoiceProps>(
     };
 
     const totalSubtotal = reservations.reduce((acc, res) => acc + (res.rate?.subtotal || 0), 0);
-    const totalPaid = reservations.reduce((acc, res) => acc + (res.payment?.paidAmount || 0), 0);
-    const totalDue = reservations.reduce((acc, res) => acc + (res.payment?.dueAmount || 0), 0);
+
+    // Access payment info from the group level
+    const group = mainRes.groupId as any;
+    const payment = group?.payment || { paidAmount: 0, dueAmount: totalSubtotal };
+
+    const totalPaid = payment.paidAmount || 0;
+    const totalDue = payment.dueAmount ?? (totalSubtotal - totalPaid);
 
     return (
-      <div ref={ref} className="p-8 font-mono bg-white text-black min-h-[500px]">
+      <div ref={ref} className="p-8 font-mono bg-white text-black min-h-125">
         <div className="flex justify-between border-b-2 pb-4 mb-6">
             <div>
                 <h1 className="text-2xl font-bold">ECO HOTEL</h1>

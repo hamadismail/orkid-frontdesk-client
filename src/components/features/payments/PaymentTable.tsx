@@ -65,14 +65,15 @@ function PaymentTable() {
         typeof groupObj === "string" ? groupObj : groupObj?._id || res._id;
 
       if (!groups[groupId]) {
+        const payment = groupObj?.payment || { paidAmount: 0, dueAmount: 0 };
         groups[groupId] = {
           _id: groupId,
           groupName: groupObj?.groupName || "Single Booking",
           guest: res.guestId,
           rooms: [],
           totalAmount: 0,
-          paidAmount: 0,
-          dueAmount: 0,
+          paidAmount: payment.paidAmount || 0,
+          dueAmount: payment.dueAmount || 0,
           status: res.status,
           reservation: res, // Keep the first reservation for the PaymentModal
         };
@@ -84,8 +85,7 @@ function PaymentTable() {
       }
 
       groups[groupId].totalAmount += res.rate.subtotal;
-      groups[groupId].paidAmount += res.payment.paidAmount;
-      groups[groupId].dueAmount += res.payment.dueAmount;
+      // Note: paidAmount and dueAmount are already initialized from group level
     });
 
     return Object.values(groups);

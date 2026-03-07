@@ -55,6 +55,7 @@ interface GuestDetailsDialogProps {
   isDialogOpen: boolean;
   setIsDialogOpen: (value: boolean) => void;
   selectedGuest: IReservation | null;
+  groupReservations?: IReservation[];
 }
 
 const DetailRow = ({
@@ -148,11 +149,14 @@ export function GuestDetailsDialog({
   isDialogOpen,
   setIsDialogOpen,
   selectedGuest,
+  groupReservations,
 }: GuestDetailsDialogProps) {
   if (!selectedGuest) return null;
 
   const guest = selectedGuest.guestId as unknown as IGuest;
-  const { stay, payment, status } = selectedGuest;
+  const group = selectedGuest.groupId as any;
+  const { stay, status } = selectedGuest;
+  const payment = group?.payment || { paidAmount: 0, dueAmount: 0, deposit: 0 };
   const room = selectedGuest.roomId as unknown as IRoom;
   const isProfileOnly = (status as any) === "PROFILE";
 
@@ -327,6 +331,48 @@ export function GuestDetailsDialog({
                     </p>
                   </CardContent>
                 </Card>
+
+                {groupReservations && groupReservations.length > 1 && (
+                  <Card className="border-none shadow-sm bg-blue-50/50">
+                    <CardContent>
+                      <h4 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <BedDouble size={14} /> Linked Rooms (Group Booking)
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {groupReservations.map((res) => {
+                          const isCurrent = res._id === selectedGuest._id;
+                          const r = res.roomId as any;
+                          return (
+                            <div
+                              key={res._id}
+                              className={cn(
+                                "flex items-center justify-between p-2 rounded-lg border text-xs",
+                                isCurrent
+                                  ? "bg-blue-100 border-blue-200"
+                                  : "bg-white border-gray-100",
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold">
+                                  Room {r?.roomNo}
+                                </span>
+                                <span className="text-muted-foreground text-[10px]">
+                                  {r?.roomType}
+                                </span>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="text-[9px] h-4"
+                              >
+                                {res.status}
+                              </Badge>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="profile" className="mt-0">
@@ -476,6 +522,7 @@ export function GuestDetailsDialog({
                   <>
                     <StayOver
                       reservation={selectedGuest}
+                      groupReservations={groupReservations}
                       onClose={() => setIsDialogOpen(false)}
                       variant="outline"
                       className="border-primary text-primary hover:bg-primary/5"

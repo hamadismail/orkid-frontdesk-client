@@ -75,6 +75,17 @@ function StayViewPage() {
 
   const isStayViewLoading = RoomLoading || ReserveLoading;
 
+  // Group reservations by groupId for the dialog
+  const groupedReservations = useMemo(() => {
+    const groups: Record<string, IReservation[]> = {};
+    allReservations.forEach((res: any) => {
+      const gId = typeof res.groupId === "object" ? res.groupId._id : res.groupId;
+      if (!groups[gId]) groups[gId] = [];
+      groups[gId].push(res);
+    });
+    return groups;
+  }, [allReservations]);
+
   useEffect(() => {
     if (isStayViewLoading || !gridContainerRef.current) return;
     const gridElement = gridContainerRef.current;
@@ -287,6 +298,15 @@ function StayViewPage() {
         isDialogOpen={isDialogOpen}
         setIsDialogOpen={setIsDialogOpen}
         selectedGuest={selectedGuest}
+        groupReservations={
+          selectedGuest
+            ? groupedReservations[
+                typeof selectedGuest.groupId === "object"
+                  ? (selectedGuest.groupId as any)._id
+                  : selectedGuest.groupId
+              ]
+            : []
+        }
       />
     </div>
   );

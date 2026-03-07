@@ -227,11 +227,14 @@ export function ReservationDialog({
               ? room
               : null;
 
+        const group = existingReservation.groupId as any;
+        const payment = group?.payment || { paidAmount: 0, deposit: 0, paymentMethod: PAYMENT_METHOD.CASH, depositMethod: DEPOSIT_METHOD.CASH };
+
         form.reset({
           isGroup:
             !!existingReservation.groupId &&
-            (existingReservation.groupId as any).groupName !== "Single Booking",
-          groupName: (existingReservation.groupId as any)?.groupName || "",
+            group?.groupName !== "Single Booking",
+          groupName: group?.groupName || "",
           name: guest?.name || "",
           phone: guest?.phone || "",
           email: guest?.email || "",
@@ -253,13 +256,13 @@ export function ReservationDialog({
               children: existingReservation.stay.children,
             },
           ],
-          paidAmount: existingReservation.payment.paidAmount.toString(),
+          paidAmount: payment.paidAmount.toString(),
           paymentMethod:
-            (existingReservation.payment.paymentMethod as PAYMENT_METHOD) ||
+            (payment.paymentMethod as PAYMENT_METHOD) ||
             PAYMENT_METHOD.CASH,
-          depositAmount: existingReservation.payment.deposit?.toString() || "",
+          depositAmount: payment.deposit?.toString() || "",
           depositMethod:
-            (existingReservation.payment.depositMethod as DEPOSIT_METHOD) ||
+            (payment.depositMethod as DEPOSIT_METHOD) ||
             DEPOSIT_METHOD.CASH,
           remarks: existingReservation.remarks || "",
           sst: existingReservation.rate.sst?.toString() || "",
@@ -395,13 +398,13 @@ export function ReservationDialog({
       }),
       payment: {
         paidAmount:
-          res.payment?.paidAmount ||
+          (res.groupId as any)?.payment?.paidAmount ||
           parseFloat(form.getValues("paidAmount") || "0"),
         deposit:
-          res.payment?.deposit ||
+          (res.groupId as any)?.payment?.deposit ||
           parseFloat(form.getValues("depositAmount") || "0"),
-        method: res.payment?.paymentMethod || form.getValues("paymentMethod"),
-        remarks: res.payment?.remarks || form.getValues("remarks"),
+        method: (res.groupId as any)?.payment?.paymentMethod || form.getValues("paymentMethod"),
+        remarks: (res.groupId as any)?.remarks || form.getValues("remarks"),
       },
       paymentDate: new Date(),
       paymentId: res._id?.toString().toUpperCase(),
@@ -454,10 +457,8 @@ export function ReservationDialog({
 
       if (data.isGroup) {
         // Handle Group Reservation
-        const sstValue = parseFloat(data.sst || "0") || 0;
-        const tourismTaxValue = parseFloat(data.tourismTax || "0") || 0;
-        const discountValue = parseFloat(data.discount || "0") || 0;
         const paidAmountValue = parseFloat(data.paidAmount || "0") || 0;
+        const depositAmountValue = parseFloat(data.depositAmount || "0") || 0;
 
         const payload = {
           groupData: {
@@ -466,8 +467,15 @@ export function ReservationDialog({
             source: data.source,
             refId: data.refId,
             status: status,
+            payment: {
+              paidAmount: paidAmountValue,
+              dueAmount: parseFloat(calculateDueAmount()) || 0,
+              deposit: depositAmountValue,
+              depositMethod: data.depositMethod,
+              paymentMethod: data.paymentMethod,
+            }
           },
-          rooms: data.rooms.map((r, index) => {
+          rooms: data.rooms.map((r) => {
             const selectedRoom = allRooms.find(
               (room: IRoom) => room.roomNo === r.roomNo,
             );
@@ -475,18 +483,6 @@ export function ReservationDialog({
 
             const roomPrice = parseFloat(r.roomPrice || "0") || 0;
             const roomSubtotal = roomPrice * stayDuration;
-            let roomPaidAmount = 0;
-            let roomDueAmount = roomSubtotal;
-
-            if (index === 0) {
-              roomDueAmount =
-                roomSubtotal +
-                sstValue +
-                tourismTaxValue -
-                discountValue -
-                paidAmountValue;
-              roomPaidAmount = paidAmountValue;
-            }
 
             return {
               ...guestData,
@@ -501,22 +497,12 @@ export function ReservationDialog({
               },
               rate: {
                 roomPrice: roomPrice,
-                subtotal:
-                  roomSubtotal +
-                  (index === 0
-                    ? sstValue + tourismTaxValue - discountValue
-                    : 0),
-                sst: index === 0 ? sstValue : 0,
-                tourismTax: index === 0 ? tourismTaxValue : 0,
-                discount: index === 0 ? discountValue : 0,
+                subtotal: roomSubtotal,
+                sst: 0,
+                tourismTax: 0,
+                discount: 0,
               },
-              payment: {
-                paidAmount: roomPaidAmount,
-                dueAmount: roomDueAmount,
-                deposit: parseFloat(data.depositAmount || "0") || 0,
-                depositMethod: data.depositMethod,
-                paymentMethod: data.paymentMethod,
-              },
+              // No payment info here, it's in groupData
             };
           }),
         };

@@ -126,6 +126,15 @@ export default function RoomDetailsDialog({
     setIsReservationDialogOpen(false);
   };
 
+  const groupReservations = React.useMemo(() => {
+    if (!reservation || !allReservations) return [];
+    const gId = typeof reservation.groupId === "object" ? (reservation.groupId as any)._id : reservation.groupId;
+    return allReservations.filter((res: any) => {
+      const resGId = typeof res.groupId === "object" ? res.groupId._id : res.groupId;
+      return resGId === gId;
+    });
+  }, [reservation, allReservations]);
+
   return (
     <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
       {/* Header with Status */}
@@ -374,6 +383,7 @@ export default function RoomDetailsDialog({
                 />
                 <StayOver
                   reservation={reservation}
+                  groupReservations={groupReservations}
                   onClose={() => setOpen(false)}
                 />
                 <CheckOut

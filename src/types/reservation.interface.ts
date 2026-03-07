@@ -1,9 +1,4 @@
-import {
-  DEPOSIT_METHOD,
-  OTAS,
-  PAYMENT_METHOD,
-  RESERVATION_STATUS,
-} from "./enums";
+import { OTAS, RESERVATION_STATUS } from "./enums";
 
 export interface IReservationStay {
   arrival: Date;
@@ -20,14 +15,6 @@ export interface IReservationRate {
   subtotal: number;
 }
 
-export interface IReservationPayment {
-  paidAmount: number;
-  dueAmount: number;
-  deposit: number;
-  depositMethod?: DEPOSIT_METHOD;
-  paymentMethod?: PAYMENT_METHOD;
-}
-
 export interface IReservation {
   _id?: string;
   confirmationNo: string;
@@ -37,7 +24,6 @@ export interface IReservation {
   status: RESERVATION_STATUS;
   stay: IReservationStay;
   rate: IReservationRate;
-  payment: IReservationPayment;
   remarks?: string;
   source?: OTAS;
   refId?: string;

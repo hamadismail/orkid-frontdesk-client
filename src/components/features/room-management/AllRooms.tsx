@@ -13,6 +13,7 @@ import LoadingSpiner from "@/src/shared/LoadingSpiner";
 import { getAllRooms } from "@/src/services/room.service";
 import AddRoomDialog from "../room-services/AddRoomDialog";
 import DateTimeClock from "@/src/shared/DateTimeClock";
+import { getAllReservations } from "@/src/services/reservation.service";
 
 function AllRooms() {
   const [floorFilter, setFloorFilter] = useState("all");
@@ -30,6 +31,16 @@ function AllRooms() {
       search: roomNumberFilter,
     }),
   });
+
+  const { data: reservationsData } = useQuery({
+    queryKey: ["reservations", "all"],
+    queryFn: () => getAllReservations({ limit: 1000 }),
+  });
+
+  const allReservations = useMemo(() => {
+    if (!reservationsData) return [];
+    return reservationsData.data || reservationsData || [];
+  }, [reservationsData]);
 
   const rooms = useMemo(() => roomData?.rooms || [], [roomData]);
   const roomStatusCounts = useMemo(() => {
@@ -137,7 +148,7 @@ function AllRooms() {
                 guestStatus={reservation?.status || ""}
                 arrival={reservation ? new Date(reservation.stay.arrival) : undefined}
                 departure={reservation ? new Date(reservation.stay.departure) : undefined}
-                allReservations={[]} // Not needed in dialog for now, fetch inside if needed
+                allReservations={allReservations}
                 reservation={reservation}
               />
             );

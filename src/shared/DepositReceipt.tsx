@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -19,16 +19,32 @@ const PrintableTable = React.forwardRef<
 >((props, ref) => {
   const currentDateTime = new Date().toLocaleString();
 
-  const data = (props.deposits || []).sort((a, b) => {
-    const roomNoA = (a.roomId as any)?.roomNo || "";
-    const roomNoB = (b.roomId as any)?.roomNo || "";
-    return roomNoA.localeCompare(roomNoB);
-  });
+  // Group by groupId to avoid duplicates
+  const groupedData = useMemo(() => {
+    const groups: Record<string, IReservation> = {};
+    (props.deposits || []).forEach((res) => {
+      // Use groupId as key, or reservationId if no groupId exists (single booking)
+      const groupObj = res.groupId as any;
+      const gId = typeof groupObj === 'string' ? groupObj : groupObj?._id || res._id;
+      
+      if (!groups[gId]) {
+        groups[gId] = res;
+      }
+    });
+    return Object.values(groups).sort((a, b) => {
+      const roomNoA = (a.roomId as any)?.roomNo || "";
+      const roomNoB = (b.roomId as any)?.roomNo || "";
+      return roomNoA.localeCompare(roomNoB);
+    });
+  }, [props.deposits]);
 
-  const categorizedTotals = data.reduce(
+  const categorizedTotals = groupedData.reduce(
     (acc, res) => {
-      const method = res.payment.depositMethod || DEPOSIT_METHOD.CASH;
-      const amount = res.payment.deposit || 0;
+      const group = res.groupId as any;
+      const payment = group?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
+      const method = payment.depositMethod || DEPOSIT_METHOD.CASH;
+      const amount = payment.deposit || 0;
+      
       if (method === DEPOSIT_METHOD.CASH) acc.cash += amount;
       else if (method === DEPOSIT_METHOD.QR) acc.qr += amount;
       else acc.others += amount;
@@ -47,29 +63,32 @@ const PrintableTable = React.forwardRef<
       </div>
       <Table>
         <TableHeader>
-          <TableRow className="border-black">
-            <TableHead className="w-10">#</TableHead>
-            <TableHead>ROOM</TableHead>
-            <TableHead>GUEST</TableHead>
-            <TableHead className="text-right">DEPOSIT (RM)</TableHead>
-            <TableHead>METHOD</TableHead>
-            <TableHead>DATE</TableHead>
+          <TableRow className="border-black hover:bg-transparent">
+            <TableHead className="w-10 text-black">#</TableHead>
+            <TableHead className="text-black">ROOM</TableHead>
+            <TableHead className="text-black">GUEST</TableHead>
+            <TableHead className="text-right text-black">DEPOSIT (RM)</TableHead>
+            <TableHead className="text-black">METHOD</TableHead>
+            <TableHead className="text-black">DATE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.map((res, index) => {
+          {groupedData?.map((res, index) => {
             const guest = res.guestId as unknown as IGuest;
             const room = res.roomId as any;
+            const group = res.groupId as any;
+            const payment = group?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
+
             return (
-              <TableRow key={res._id!.toString()} className="border-black">
+              <TableRow key={res._id!.toString()} className="border-black hover:bg-transparent">
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>{room?.roomNo}</TableCell>
                 <TableCell>{guest?.name?.slice(0, 20)}</TableCell>
                 <TableCell className="text-right">
-                  {res.payment.deposit?.toFixed(2)}
+                  {payment.deposit?.toFixed(2)}
                 </TableCell>
                 <TableCell>
-                  {res.payment.depositMethod || DEPOSIT_METHOD.CASH}
+                  {payment.depositMethod || DEPOSIT_METHOD.CASH}
                 </TableCell>
                 <TableCell>
                   {res.createdAt

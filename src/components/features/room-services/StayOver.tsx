@@ -41,9 +41,11 @@ import {
   SelectValue,
 } from "@/src/components/ui/select";
 import { PaymentInvoice } from "@/src/shared/PaymentInvoice";
+import { Badge } from "../../ui/badge";
 
 type StayOverProps = {
   reservation: IReservation;
+  groupReservations?: IReservation[];
   onClose?: () => void;
   variant?: "secondary" | "outline" | "default";
   size?: "sm" | "default" | "lg";
@@ -52,6 +54,7 @@ type StayOverProps = {
 
 export default function StayOver({
   reservation,
+  groupReservations,
   onClose,
   variant = "secondary",
   size = "sm",
@@ -78,6 +81,37 @@ export default function StayOver({
 
   const queryClient = useQueryClient();
 
+  const group = reservation?.groupId as any;
+
+  // Financial context for the group
+  const groupFinancials = useMemo(() => {
+    // If group object has payment data, use it
+    if (group?.payment) {
+      return {
+        paidAmount: group.payment.paidAmount || 0,
+        dueAmount: group.payment.dueAmount || 0,
+        deposit: group.payment.deposit || 0,
+      };
+    }
+
+    // Fallback: If we have group reservations, calculate the totals
+    if (groupReservations && groupReservations.length > 0) {
+      const totalDue = groupReservations.reduce(
+        (acc, res) => acc + (res.rate?.subtotal || 0),
+        0,
+      );
+      // Since individual paidAmount was moved to group, we check if any reservation still has it (legacy)
+      // but ideally we just return 0/placeholder if the central group object isn't populated yet
+      return {
+        paidAmount: 0,
+        dueAmount: totalDue,
+        deposit: 0,
+      };
+    }
+
+    return { paidAmount: 0, dueAmount: 0, deposit: 0 };
+  }, [group, groupReservations]);
+
   const additionalNights = useMemo(() => {
     if (!newDeparture || !reservation?.stay?.departure) return 0;
     const nights = differenceInCalendarDays(
@@ -92,8 +126,8 @@ export default function StayOver({
   }, [additionalNights, updatedRoomPrice]);
 
   const totalDueAfterExtension = useMemo(() => {
-    return (reservation?.payment?.dueAmount || 0) + extraCharge;
-  }, [reservation?.payment?.dueAmount, extraCharge]);
+    return groupFinancials.dueAmount + extraCharge;
+  }, [groupFinancials.dueAmount, extraCharge]);
 
   const remainingDue = useMemo(() => {
     return totalDueAfterExtension - parseFloat(paidAmount || "0");
@@ -158,21 +192,20 @@ export default function StayOver({
     onError: (error: any) => {
       toast.error("Extension failed", { description: error.message });
     },
-    });
+  });
 
-    if (!reservation) return null;
+  if (!reservation) return null;
 
-    const handleCloseReceipt = (val: boolean) => {
+  const handleCloseReceipt = (val: boolean) => {
     setShowReceipt(val);
     if (!val) {
       onClose?.();
     }
-    };
+  };
 
-    return (
+  return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-
         <DialogTrigger asChild>
           <Button
             variant={variant}
@@ -292,27 +325,67 @@ export default function StayOver({
               />
             </div>
 
+            {groupReservations && groupReservations.length > 1 && (
+              <div className="mt-4 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                <h4 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                  <BedDouble size={14} /> Linked Rooms in Group
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {groupReservations.map((res) => {
+                    const isCurrent = res._id === reservation._id;
+                    const r = res.roomId as any;
+                    return (
+                      <div
+                        key={res._id}
+                        className={cn(
+                          "px-2 py-1 rounded border text-[10px] flex items-center gap-2",
+                          isCurrent
+                            ? "bg-blue-100 border-blue-200 font-bold"
+                            : "bg-white border-gray-100",
+                        )}
+                      >
+                        Room {r?.roomNo}
+                        <span className="text-[8px] opacity-70">
+                          ({res.status})
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mt-2 p-3 bg-muted rounded-lg space-y-2 text-sm">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                  Group Billing Context
+                </span>
+                {group?.groupName && (
+                  <Badge variant="outline" className="text-[8px] h-4">
+                    {group.groupName}
+                  </Badge>
+                )}
+              </div>
               <div className="flex justify-between">
-                <span>Current Balance Due:</span>
-                <span>
-                  RM {(reservation?.payment?.dueAmount || 0).toFixed(2)}
+                <span>Group Total Due:</span>
+                <span className="font-bold">
+                  RM {(groupFinancials.dueAmount || 0).toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between text-blue-600 font-medium">
                 <span>Extension Charge ({additionalNights} nights):</span>
-                <span>RM {extraCharge.toFixed(2)}</span>
+                <span>+ RM {extraCharge.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between border-t pt-1 font-bold">
-                <span>Total Due After Extension:</span>
+              <div className="flex justify-between border-t border-muted-foreground/20 pt-1 font-bold">
+                <span>New Group Total:</span>
                 <span>RM {totalDueAfterExtension.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-green-600">
                 <span>Amount Paid Now:</span>
                 <span>- RM {parseFloat(paidAmount || "0").toFixed(2)}</span>
               </div>
-              <div className="flex justify-between border-t pt-1 font-bold text-lg">
-                <span>Remaining Balance:</span>
+              <div className="flex justify-between border-t-2 border-primary/20 pt-1 font-extrabold text-lg text-primary">
+                <span>Remaining Group Balance:</span>
                 <span
                   className={
                     remainingDue > 0 ? "text-red-600" : "text-green-600"
