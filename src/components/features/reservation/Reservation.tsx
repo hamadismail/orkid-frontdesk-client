@@ -16,7 +16,7 @@ import { IReservation } from "@/src/types/reservation.interface";
 import { format } from "date-fns";
 import { ReservationDialog } from "./ReservationDialog";
 import { Input } from "@/src/components/ui/input";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import TableSkeleton from "@/src/shared/TableSkeleton";
 import {
   Dialog,
@@ -33,22 +33,20 @@ import {
   ChevronsRight,
   Printer,
   CalendarCheck,
-  Loader2,
 } from "lucide-react";
 import ReservationInvoice from "@/src/shared/ReservationInvoice";
 import { getAllReservations } from "@/src/services/reservation.service";
 import { IReservationGroup } from "@/src/types/group.interface";
 import { IGuest } from "@/src/types/guest.interface";
-import { batchCheckIn } from "@/src/services/group.service";
-import { toast } from "sonner";
 import { RESERVATION_STATUS } from "@/src/types/enums";
 
 export default function Reservation() {
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isNewReservationDialogOpen, setIsNewReservationDialogOpen] =
     useState(false);
+  const [isCheckInDialogOpen, setIsCheckInDialogOpen] = useState(false);
+  const [selectedCheckInReservation, setSelectedCheckInReservation] = useState<any>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<any>(null);
   const [selectedReservationForPrint, setSelectedReservationForPrint] =
@@ -60,23 +58,11 @@ export default function Reservation() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["reservations", "list", page, searchQuery],
-    queryFn: () => getAllReservations({ 
-      page, 
+    queryFn: () => getAllReservations({
+      page,
       search: searchQuery,
       status: RESERVATION_STATUS.RESERVED
     }),
-  });
-
-  const { mutate: performBatchCheckIn, isPending: isCheckingIn } = useMutation({
-    mutationFn: (groupId: string) => batchCheckIn(groupId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["reservations"] });
-      queryClient.invalidateQueries({ queryKey: ["rooms"] });
-      toast.success("Group check-in completed successfully");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Group check-in failed");
-    },
   });
 
   const allReservations = useMemo(() => {
@@ -185,6 +171,10 @@ export default function Reservation() {
                       r.status === RESERVATION_STATUS.CONFIRMED ||
                       r.status === RESERVATION_STATUS.RESERVED,
                   );
+                const canSingleCheckIn =
+                  isSingle &&
+                  (reservations[0].status === RESERVATION_STATUS.CONFIRMED ||
+                    reservations[0].status === RESERVATION_STATUS.RESERVED);
 
                 return (
                   <React.Fragment key={groupId}>
@@ -232,20 +222,18 @@ export default function Reservation() {
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex justify-end gap-2">
-                          {canGroupCheckIn && (
+                          {(canGroupCheckIn || canSingleCheckIn) && (
                             <Button
                               size="sm"
                               variant="outline"
                               className="h-8 gap-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
-                              onClick={() => performBatchCheckIn(groupId)}
-                              disabled={isCheckingIn}
+                              onClick={() => {
+                                setSelectedCheckInReservation(reservations[0]);
+                                setIsCheckInDialogOpen(true);
+                              }}
                             >
-                              {isCheckingIn ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <CalendarCheck className="h-3 w-3" />
-                              )}
-                              Group Check-In
+                              <CalendarCheck className="h-3 w-3" />
+                              {isSingle ? "Check-In" : "Group Check-In"}
                             </Button>
                           )}
                           <Button
@@ -374,6 +362,14 @@ export default function Reservation() {
         allReservations={allReservations}
         isOpen={isNewReservationDialogOpen}
         onClose={closeNewReservationDialog}
+      />
+
+      <ReservationDialog
+        allReservations={allReservations}
+        isOpen={isCheckInDialogOpen}
+        onClose={() => setIsCheckInDialogOpen(false)}
+        mode="checkin"
+        existingReservation={selectedCheckInReservation}
       />
 
       {selectedReservationForPrint && (

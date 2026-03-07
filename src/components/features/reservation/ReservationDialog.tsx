@@ -414,11 +414,26 @@ export function ReservationDialog({
       },
       room: {
         number:
-          (room as any)?.roomNo || form.getValues("rooms")[0]?.roomNo || "-",
+          groupReservations.length > 0
+            ? groupReservations
+                .map((gr: any) => gr.roomId?.roomNo || gr.roomNo || "-")
+                .filter((n: string) => n !== "-")
+                .join(", ")
+            : (room as any)?.roomNo || form.getValues("rooms")[0]?.roomNo || "-",
         type:
-          (room as any)?.roomType ||
-          form.getValues("rooms")[0]?.roomType ||
-          "-",
+          groupReservations.length > 0
+            ? [
+                ...new Set(
+                  groupReservations.map(
+                    (gr: any) => gr.roomId?.roomType || gr.roomType || "-",
+                  ),
+                ),
+              ]
+                .filter((t) => t !== "-")
+                .join(", ")
+            : (room as any)?.roomType ||
+              form.getValues("rooms")[0]?.roomType ||
+              "-",
       },
       groupReservations: groupReservations.map((gr: any) => {
         // Try to find the matching room in the form to get the roomNo
@@ -444,15 +459,17 @@ export function ReservationDialog({
       }),
       payment: {
         paidAmount:
+          parseFloat(form.getValues("paidAmount") || "0") ||
           (res.groupId as any)?.payment?.paidAmount ||
-          parseFloat(form.getValues("paidAmount") || "0"),
+          0,
         deposit:
+          parseFloat(form.getValues("depositAmount") || "0") ||
           (res.groupId as any)?.payment?.deposit ||
-          parseFloat(form.getValues("depositAmount") || "0"),
+          0,
         method:
-          (res.groupId as any)?.payment?.paymentMethod ||
-          form.getValues("paymentMethod"),
-        remarks: (res.groupId as any)?.remarks || form.getValues("remarks"),
+          form.getValues("paymentMethod") ||
+          (res.groupId as any)?.payment?.paymentMethod,
+        remarks: form.getValues("remarks") || (res.groupId as any)?.remarks,
       },
       paymentDate: new Date(),
       paymentId: res._id?.toString().toUpperCase(),
@@ -473,6 +490,7 @@ export function ReservationDialog({
             deposit: parseFloat(data.depositAmount || "0") || 0,
             depositMethod: data.depositMethod,
             paymentMethod: data.paymentMethod,
+            remarks: data.remarks,
           },
         };
         const response = await checkInReservation(
