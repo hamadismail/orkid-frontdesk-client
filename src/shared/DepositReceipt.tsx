@@ -21,27 +21,29 @@ const PrintableTable = React.forwardRef<
 
   // Group by groupId to avoid duplicates
   const groupedData = useMemo(() => {
-    const groups: Record<string, IReservation> = {};
+    const groups: Record<string, { main: IReservation; sub: IReservation[] }> = {};
     (props.deposits || []).forEach((res) => {
       // Use groupId as key, or reservationId if no groupId exists (single booking)
       const groupObj = res.groupId as any;
       const gId = typeof groupObj === 'string' ? groupObj : groupObj?._id || res._id;
       
       if (!groups[gId]) {
-        groups[gId] = res;
+        groups[gId] = { main: res, sub: [] };
       }
+      groups[gId].sub.push(res);
     });
     return Object.values(groups).sort((a, b) => {
-      const roomNoA = (a.roomId as any)?.roomNo || "";
-      const roomNoB = (b.roomId as any)?.roomNo || "";
+      const roomNoA = (a.main.roomId as any)?.roomNo || "";
+      const roomNoB = (b.main.roomId as any)?.roomNo || "";
       return roomNoA.localeCompare(roomNoB);
     });
   }, [props.deposits]);
 
   const categorizedTotals = groupedData.reduce(
-    (acc, res) => {
-      const group = res.groupId as any;
-      const payment = group?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
+    (acc, group) => {
+      const res = group.main;
+      const groupObj = res.groupId as any;
+      const payment = groupObj?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
       const method = payment.depositMethod || DEPOSIT_METHOD.CASH;
       const amount = payment.deposit || 0;
       
@@ -65,37 +67,56 @@ const PrintableTable = React.forwardRef<
         <TableHeader>
           <TableRow className="border-black hover:bg-transparent">
             <TableHead className="w-10 text-black">#</TableHead>
-            <TableHead className="text-black">ROOM</TableHead>
-            <TableHead className="text-black">GUEST</TableHead>
+            <TableHead className="text-black">GUEST / ROOMS</TableHead>
             <TableHead className="text-right text-black">DEPOSIT (RM)</TableHead>
             <TableHead className="text-black">METHOD</TableHead>
             <TableHead className="text-black">DATE</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {groupedData?.map((res, index) => {
+          {groupedData?.map((group, index) => {
+            const res = group.main;
             const guest = res.guestId as unknown as IGuest;
-            const room = res.roomId as any;
-            const group = res.groupId as any;
-            const payment = group?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
+            const groupObj = res.groupId as any;
+            const payment = groupObj?.payment || { deposit: 0, depositMethod: DEPOSIT_METHOD.CASH };
 
             return (
-              <TableRow key={res._id!.toString()} className="border-black hover:bg-transparent">
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{room?.roomNo}</TableCell>
-                <TableCell>{guest?.name?.slice(0, 20)}</TableCell>
-                <TableCell className="text-right">
-                  {payment.deposit?.toFixed(2)}
-                </TableCell>
-                <TableCell>
-                  {payment.depositMethod || DEPOSIT_METHOD.CASH}
-                </TableCell>
-                <TableCell>
-                  {res.createdAt
-                    ? new Date(res.createdAt).toLocaleDateString()
-                    : "-"}
-                </TableCell>
-              </TableRow>
+              <React.Fragment key={res._id!.toString()}>
+                {/* Main Group Row */}
+                <TableRow className="border-black bg-muted/20 hover:bg-transparent font-bold">
+                  <TableCell className="py-2">{index + 1}</TableCell>
+                  <TableCell className="py-2">
+                    {guest?.name?.toUpperCase()} 
+                    {group.sub.length > 1 && ` (Group: ${groupObj?.groupName || groupObj?.groupCode})`}
+                  </TableCell>
+                  <TableCell className="text-right py-2">
+                    {payment.deposit?.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {payment.depositMethod || DEPOSIT_METHOD.CASH}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {res.createdAt
+                      ? new Date(res.createdAt).toLocaleDateString()
+                      : "-"}
+                  </TableCell>
+                </TableRow>
+                {/* Sub-rows for each room */}
+                {group.sub.map((subRes, subIndex) => {
+                  const subRoom = subRes.roomId as any;
+                  return (
+                    <TableRow key={subRes._id!.toString()} className="border-black/20 hover:bg-transparent border-b last:border-b-0">
+                      <TableCell className="py-1"></TableCell>
+                      <TableCell className="py-1 pl-8 text-muted-foreground italic">
+                        └ Room: {subRoom?.roomNo} ({subRoom?.roomType})
+                      </TableCell>
+                      <TableCell className="py-1"></TableCell>
+                      <TableCell className="py-1"></TableCell>
+                      <TableCell className="py-1"></TableCell>
+                    </TableRow>
+                  );
+                })}
+              </React.Fragment>
             );
           })}
         </TableBody>
