@@ -1,4 +1,3 @@
-import { Types } from "mongoose";
 import {
   DEPOSIT_METHOD,
   OTAS,
@@ -30,11 +29,11 @@ export interface IReservationPayment {
 }
 
 export interface IReservation {
-  _id?: Types.ObjectId;
+  _id?: string;
   confirmationNo: string;
-  groupId: Types.ObjectId;
-  guestId: Types.ObjectId;
-  roomId: Types.ObjectId;
+  groupId: string;
+  guestId: string;
+  roomId: string;
   status: RESERVATION_STATUS;
   stay: IReservationStay;
   rate: IReservationRate;
@@ -46,7 +45,7 @@ export interface IReservation {
   cancelReason?: string;
   checkedInAt?: Date;
   checkedOutAt?: Date;
-  movedFromRoomId?: Types.ObjectId;
+  movedFromRoomId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }

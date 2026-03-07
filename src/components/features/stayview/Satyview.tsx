@@ -60,7 +60,9 @@ function StayViewPage() {
     return [];
   }, [reservations]);
 
-  const [startDate, setStartDate] = useState(normalizeToMalaysiaMidnight(startOfWeek(new Date())));
+  const [startDate, setStartDate] = useState(
+    normalizeToMalaysiaMidnight(startOfWeek(new Date())),
+  );
   const [selectedGuest, setSelectedGuest] = useState<IReservation | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -106,9 +108,12 @@ function StayViewPage() {
   const endDate = addDays(startDate, viewDays - 1);
   const dateRange = eachDayOfInterval({ start: startDate, end: endDate });
 
-  const handleNext = () => setStartDate(normalizeToMalaysiaMidnight(addDays(startDate, viewDays)));
-  const handlePrev = () => setStartDate(normalizeToMalaysiaMidnight(subDays(startDate, viewDays)));
-  const handleToday = () => setStartDate(normalizeToMalaysiaMidnight(startOfWeek(new Date())));
+  const handleNext = () =>
+    setStartDate(normalizeToMalaysiaMidnight(addDays(startDate, viewDays)));
+  const handlePrev = () =>
+    setStartDate(normalizeToMalaysiaMidnight(subDays(startDate, viewDays)));
+  const handleToday = () =>
+    setStartDate(normalizeToMalaysiaMidnight(startOfWeek(new Date())));
 
   const handleViewGuest = (res: IReservation) => {
     setSelectedGuest(res);
@@ -235,11 +240,11 @@ function StayViewPage() {
                         .filter((res: IReservation) => {
                           const resRoomId =
                             typeof res.roomId === "object"
-                              ? res.roomId._id
+                              ? (res.roomId as IRoom)._id
                               : res.roomId;
                           const roomId =
                             typeof room._id === "object"
-                              ? (room._id as any).toString()
+                              ? (room._id as IRoom).toString()
                               : room._id;
 
                           return resRoomId?.toString() === roomId?.toString();
