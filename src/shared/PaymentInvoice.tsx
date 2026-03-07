@@ -34,6 +34,7 @@ export function PaymentInvoice({
     const res = rawData.reservationId || {};
     const group = rawData.groupId || {};
     const groupReservations = rawData.groupReservations || [];
+    const groupPayment = rawData.groupPayment || group.payment || {};
 
     return {
       guest: {
@@ -58,10 +59,23 @@ export function PaymentInvoice({
         guestName: gr.guestId?.name,
       })),
       payment: {
-        paidAmount: rawData.amount || rawData.payment?.paidAmount || 0,
-        deposit: rawData.payment?.deposit || 0,
-        method: rawData.paymentMethod || rawData.payment?.method || "Cash",
-        remarks: rawData.remarks || rawData.payment?.remarks || "",
+        paidAmount:
+          rawData.amount ||
+          rawData.payment?.paidAmount ||
+          groupPayment.paidAmount ||
+          0,
+        deposit: groupPayment.deposit || rawData.payment?.deposit || 0,
+        method:
+          rawData.paymentMethod ||
+          rawData.payment?.method ||
+          groupPayment.paymentMethod ||
+          "Cash",
+        depositMethod:
+          groupPayment.depositMethod ||
+          rawData.payment?.depositMethod ||
+          "Cash",
+        remarks:
+          rawData.remarks || rawData.payment?.remarks || group.remarks || "",
       },
       paymentDate: rawData.createdAt || rawData.paymentDate || new Date(),
       paymentId: rawData._id?.toString().toUpperCase() || "N/A",

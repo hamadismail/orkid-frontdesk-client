@@ -326,7 +326,7 @@ export function GuestDetailsDialog({
                       <MessageSquare size={14} /> Internal Remarks
                     </h4>
                     <p className="text-sm italic text-muted-foreground leading-relaxed">
-                      {selectedGuest.remarks ||
+                      {group?.remarks ||
                         "No special instructions or remarks provided for this guest."}
                     </p>
                   </CardContent>

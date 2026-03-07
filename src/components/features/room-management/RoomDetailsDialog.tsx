@@ -213,13 +213,13 @@ export default function RoomDetailsDialog({
               )}
             </div>
 
-            {reservation?.remarks && (
+            {((reservation?.groupId as any)?.remarks || (reservation as any).remarks) && (
               <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-100 dark:border-blue-900/50">
                 <div className="text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 mb-1">
                   Remarks
                 </div>
                 <p className="text-sm italic text-blue-800 dark:text-blue-300">
-                  {reservation.remarks}
+                  {(reservation?.groupId as any).remarks || (reservation as any).remarks}
                 </p>
               </div>
             )}

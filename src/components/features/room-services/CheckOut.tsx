@@ -65,7 +65,8 @@ export default function CheckOut({
 
   if (!reservation) return null;
 
-  const dueAmount = reservation.payment?.dueAmount || 0;
+  const group = reservation.groupId as any;
+  const dueAmount = group?.payment?.dueAmount || 0;
   const isFullyPaid = dueAmount <= 0;
   const guest = reservation.guestId as unknown as IGuest;
 

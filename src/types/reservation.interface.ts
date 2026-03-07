@@ -24,7 +24,6 @@ export interface IReservation {
   status: RESERVATION_STATUS;
   stay: IReservationStay;
   rate: IReservationRate;
-  remarks?: string;
   source?: OTAS;
   refId?: string;
   cancelledAt?: Date;

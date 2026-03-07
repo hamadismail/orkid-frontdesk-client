@@ -298,9 +298,11 @@ export function ReservationDialog({
             (payment.paymentMethod as PAYMENT_METHOD) || PAYMENT_METHOD.CASH,
           depositAmount: payment.deposit?.toString() || "",
           depositMethod:
-            (payment.depositMethod as DEPOSIT_METHOD) || DEPOSIT_METHOD.CASH,
-          remarks: existingReservation.remarks || "",
+            (payment.depositMethod as DEPOSIT_METHOD) ||
+            DEPOSIT_METHOD.CASH,
+          remarks: group?.remarks || "",
           sst: existingReservation.rate.sst?.toString() || "",
+
           tourismTax: existingReservation.rate.tourismTax?.toString() || "",
           discount: existingReservation.rate.discount?.toString() || "",
         });
@@ -509,6 +511,7 @@ export function ReservationDialog({
             source: data.source,
             refId: data.refId,
             status: status,
+            remarks: data.remarks,
             payment: {
               paidAmount: paidAmountValue,
               dueAmount: parseFloat(calculateDueAmount()) || 0,
