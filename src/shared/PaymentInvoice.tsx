@@ -32,14 +32,15 @@ export function PaymentInvoice({
     // If it's a flat IPayment object (from backend response)
     // We try to reconstruct the nested format
     const res = rawData.reservationId || {};
+    const group = rawData.groupId || {};
     const groupReservations = rawData.groupReservations || [];
 
     return {
       guest: {
         name: rawData.guestName || res.guestId?.name || "Guest",
         phone: res.guestId?.phone || "N/A",
-        source: res.source || rawData.source || "-",
-        refId: res.refId || rawData.refId || "-",
+        source: res.source || group.source || rawData.source || "-",
+        refId: res.refId || group.refId || rawData.refId || "-",
       },
       stay: {
         arrival: res.stay?.arrival || rawData.createdAt,
@@ -204,7 +205,7 @@ export function PaymentInvoice({
             {invoiceData.groupReservations &&
             invoiceData.groupReservations.length > 0 ? (
               <div className="text-xs font-semibold text-gray-800">
-               {"Payment For - "}
+                {"Payment For - "}
                 {invoiceData.groupReservations.map((gr: any, idx: number) => (
                   <span key={idx}>
                     {gr.roomNo}
