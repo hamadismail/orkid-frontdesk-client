@@ -103,6 +103,7 @@ const STEPS = [
 ] as const;
 
 export function ReservationDialog({
+  allReservations,
   isOpen,
   onClose,
   room,
@@ -220,20 +221,64 @@ export function ReservationDialog({
       // Just opened
       if (existingReservation) {
         const guest = existingReservation.guestId as unknown as IGuest;
-        const resRoom =
-          typeof existingReservation.roomId === "object"
-            ? existingReservation.roomId
-            : room && room._id === existingReservation.roomId
-              ? room
-              : null;
-
         const group = existingReservation.groupId as any;
-        const payment = group?.payment || { paidAmount: 0, deposit: 0, paymentMethod: PAYMENT_METHOD.CASH, depositMethod: DEPOSIT_METHOD.CASH };
+
+        // Find all reservations in the same group if it's a group booking
+        const gId = typeof group === "object" ? group?._id : group;
+        const isGroupBooking =
+          !!gId &&
+          group?.groupName !== "Single Booking" &&
+          !group?.groupName?.startsWith("Single -");
+
+        let roomsToPopulate = [];
+
+        if (isGroupBooking && allReservations) {
+          // Find all linked reservations
+          const linkedRes = allReservations.filter((res: any) => {
+            const resGId =
+              typeof res.groupId === "object" ? res.groupId?._id : res.groupId;
+            return resGId === gId;
+          });
+
+          roomsToPopulate = linkedRes.map((res: any) => {
+            const resRoom = res.roomId as any;
+            return {
+              roomType: resRoom?.roomType || "",
+              roomNo: resRoom?.roomNo || "",
+              roomPrice: res.rate.roomPrice.toString(),
+              adults: res.stay.adults,
+              children: res.stay.children,
+            };
+          });
+        } else {
+          // Single room pre-fill
+          const resRoom =
+            typeof existingReservation.roomId === "object"
+              ? existingReservation.roomId
+              : room && room._id === existingReservation.roomId
+                ? room
+                : null;
+
+          roomsToPopulate = [
+            {
+              roomType: (resRoom as any)?.roomType || room?.roomType || "",
+              roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
+              roomPrice: existingReservation.rate.roomPrice.toString(),
+              adults: existingReservation.stay.adults,
+              children: existingReservation.stay.children,
+            },
+          ];
+        }
+
+        const payment = group?.payment || {
+          paidAmount: 0,
+          deposit: 0,
+          paymentMethod: PAYMENT_METHOD.CASH,
+          depositMethod: DEPOSIT_METHOD.CASH,
+        };
 
         form.reset({
-          isGroup:
-            !!existingReservation.groupId &&
-            group?.groupName !== "Single Booking",
+          isGroup: isGroupBooking,
           groupName: group?.groupName || "",
           name: guest?.name || "",
           phone: guest?.phone || "",
@@ -247,40 +292,35 @@ export function ReservationDialog({
               ? new Date()
               : new Date(existingReservation.stay.arrival),
           departureDate: new Date(existingReservation.stay.departure),
-          rooms: [
-            {
-              roomType: (resRoom as any)?.roomType || room?.roomType || "",
-              roomNo: (resRoom as any)?.roomNo || room?.roomNo || "",
-              roomPrice: existingReservation.rate.roomPrice.toString(),
-              adults: existingReservation.stay.adults,
-              children: existingReservation.stay.children,
-            },
-          ],
+          rooms: roomsToPopulate,
           paidAmount: payment.paidAmount.toString(),
           paymentMethod:
-            (payment.paymentMethod as PAYMENT_METHOD) ||
-            PAYMENT_METHOD.CASH,
+            (payment.paymentMethod as PAYMENT_METHOD) || PAYMENT_METHOD.CASH,
           depositAmount: payment.deposit?.toString() || "",
           depositMethod:
-            (payment.depositMethod as DEPOSIT_METHOD) ||
-            DEPOSIT_METHOD.CASH,
+            (payment.depositMethod as DEPOSIT_METHOD) || DEPOSIT_METHOD.CASH,
           remarks: existingReservation.remarks || "",
           sst: existingReservation.rate.sst?.toString() || "",
           tourismTax: existingReservation.rate.tourismTax?.toString() || "",
           discount: existingReservation.rate.discount?.toString() || "",
         });
         setSelectedGuest(guest);
-        setIsGroup(
-          !!existingReservation.groupId &&
-            (existingReservation.groupId as any).groupName !== "Single Booking",
-        );
+        setIsGroup(isGroupBooking);
       } else {
         // Reset to default for new reservation when dialog opens
         handleReset();
       }
     }
     prevOpen.current = isOpen;
-  }, [existingReservation, isOpen, room, form, handleReset, mode]);
+  }, [
+    existingReservation,
+    allReservations,
+    isOpen,
+    room,
+    form,
+    handleReset,
+    mode,
+  ]);
 
   // 2. Field Array
   const { fields, append, remove } = useFieldArray({
@@ -403,7 +443,9 @@ export function ReservationDialog({
         deposit:
           (res.groupId as any)?.payment?.deposit ||
           parseFloat(form.getValues("depositAmount") || "0"),
-        method: (res.groupId as any)?.payment?.paymentMethod || form.getValues("paymentMethod"),
+        method:
+          (res.groupId as any)?.payment?.paymentMethod ||
+          form.getValues("paymentMethod"),
         remarks: (res.groupId as any)?.remarks || form.getValues("remarks"),
       },
       paymentDate: new Date(),
@@ -473,7 +515,7 @@ export function ReservationDialog({
               deposit: depositAmountValue,
               depositMethod: data.depositMethod,
               paymentMethod: data.paymentMethod,
-            }
+            },
           },
           rooms: data.rooms.map((r) => {
             const selectedRoom = allRooms.find(
