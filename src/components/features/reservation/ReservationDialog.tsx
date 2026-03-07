@@ -115,6 +115,7 @@ export function ReservationDialog({
   const [reservationData, setReservationData] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<IGuest | null>(null);
+  const [previousPaidAmount, setPreviousPaidAmount] = useState(0);
   const [invoiceType, setInvoiceType] = useState<"payment" | "reservation">(
     "reservation",
   );
@@ -213,6 +214,7 @@ export function ReservationDialog({
     setSelectedGuest(null);
     setReservationData(null);
     setIsGroup(false);
+    setPreviousPaidAmount(0);
   }, [form, room]);
 
   // Effect to pre-fill from existing reservation
@@ -277,6 +279,8 @@ export function ReservationDialog({
           depositMethod: DEPOSIT_METHOD.CASH,
         };
 
+        setPreviousPaidAmount(payment.paidAmount || 0);
+
         form.reset({
           isGroup: isGroupBooking,
           groupName: group?.groupName || "",
@@ -293,7 +297,7 @@ export function ReservationDialog({
               : new Date(existingReservation.stay.arrival),
           departureDate: new Date(existingReservation.stay.departure),
           rooms: roomsToPopulate,
-          paidAmount: payment.paidAmount.toString(),
+          paidAmount: mode === "checkin" ? "" : payment.paidAmount.toString(),
           paymentMethod:
             (payment.paymentMethod as PAYMENT_METHOD) || PAYMENT_METHOD.CASH,
           depositAmount: payment.deposit?.toString() || "",
@@ -365,12 +369,12 @@ export function ReservationDialog({
 
   const calculateDueAmount = useCallback(() => {
     const totalAmount = parseFloat(calculateTotalAmount()) || 0;
-    const paidAmount = parseFloat(form.watch("paidAmount") || "0") || 0;
+    const currentPaid = parseFloat(form.watch("paidAmount") || "0") || 0;
     const discount = parseFloat(form.watch("discount") || "0") || 0;
 
-    const dueAmount = totalAmount - paidAmount - discount;
+    const dueAmount = totalAmount - previousPaidAmount - currentPaid - discount;
     return dueAmount.toFixed(2);
-  }, [calculateTotalAmount, form]);
+  }, [calculateTotalAmount, form, previousPaidAmount]);
 
   const paymentInvoiceData = useMemo(() => {
     if (!reservationData) return null;
@@ -1632,8 +1636,18 @@ export function ReservationDialog({
                                 </span>
                               </div>
                             )}
+                            {previousPaidAmount > 0 && (
+                              <div className="flex justify-between text-sm font-semibold text-muted-foreground">
+                                <span>Previous Paid</span>
+                                <span>RM {previousPaidAmount.toFixed(2)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between text-sm font-semibold text-primary">
-                              <span>Paid Amount</span>
+                              <span>
+                                {previousPaidAmount > 0
+                                  ? "Paying Now"
+                                  : "Paid Amount"}
+                              </span>
                               <span>
                                 RM{" "}
                                 {parseFloat(
